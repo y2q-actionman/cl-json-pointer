@@ -1,0 +1,20 @@
+(defun read-json-file (path)
+  (with-open-file (stream path :direction :input)
+    (cl-json:with-decoder-simple-clos-semantics
+      (cl-json:decode-json stream))))
+
+
+JSON-POINTER> (read-json-file "rfc6901-example.json")
+
+
+Invalid SB-MOP:SLOT-DEFINITION initialization: the
+initialization argument :NAME was constant: :FOO.
+   [Condition of type SB-PCL::SLOTD-INITIALIZATION-ERROR]
+See also:
+  The Art of the Metaobject Protocol, SLOT-DEFINITION [:initialization]
+
+Restarts:
+ 0: [RETRY] Retry SLIME REPL evaluation request.
+ 1: [*ABORT] Return to SLIME's top level.
+ 2: [ABORT] abort thread (#<THREAD "repl-thread" RUNNING {1003690003}>)
+
