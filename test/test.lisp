@@ -21,8 +21,24 @@
     (loop for c in *rfc6901-example-keys*
        do (dt c))))
 
+
+(defmacro define-this-source-pathname-variable (name)
+  `(progn
+     (eval-when (:compile-toplevel)
+       (defparameter ,name *compile-file-truename*))
+     (eval-when (:load-toplevel)
+       (defvar ,name *load-truename*))
+     (eval-when (:execute)
+       (defvar ,name))))
+
+(define-this-source-pathname-variable *this-file-path*)
+
+(defparameter *rfc6901-example-path*
+  (merge-pathnames "rfc6901-example.json"
+		   *this-file-path*))
+
 (defun test-traverse-json ()
-  (let ((json (read-json-file "rfc6901-example.json")))
+  (let ((json (read-json-file *rfc6901-example-path*)))
     (flet ((dt (cas)
 	     (let* ((ptr (parse-json-pointer cas))
 		    (result (traverse-json json ptr)))

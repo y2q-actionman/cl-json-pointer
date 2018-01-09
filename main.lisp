@@ -8,6 +8,7 @@
 
 (defparameter *parse-json-pointer-buffer-length* 16)
 
+;; TODO: accept URI fragment marker
 (defun parse-json-pointer (string)
   (let ((ret ())
 	(string-len (length string))
@@ -16,7 +17,7 @@
 	(parsing-escape-token? nil))
     (when (zerop string-len)
       (return-from parse-json-pointer ()))
-    (unless (char= (char string 0) #\slash)
+    (unless (char= (char string 0) #\/)
       (error 'json-pointer-syntax-error
 	     :format-control "bad char as root: ~C"
 	     :format-arguments (list (char string 0))))
@@ -29,18 +30,18 @@
       (loop for i of-type fixnum from 1 below string-len
 	 as c of-type character = (char string i)
 
-	 if (char= c #\slash)
+	 if (char= c #\/)
 	 do (push-reference-token)
 	 else if parsing-escape-token?
 	 do (case c
-	      (#\0 (vector-push-extend #\tilde buf))
-	      (#\1 (vector-push-extend #\slash buf))
+	      (#\0 (vector-push-extend #\~ buf))
+	      (#\1 (vector-push-extend #\/ buf))
 	      (otherwise
 	       (error 'json-pointer-syntax-error
 		      :format-control "bad char as escape: ~C"
 		      :format-arguments (list c))))
 	   (setf parsing-escape-token? nil)
-	 else if (char= #\tilde c)
+	 else if (char= #\~ c)
 	 do (setf parsing-escape-token? t)
 	 else
 	 do (vector-push-extend c buf)
