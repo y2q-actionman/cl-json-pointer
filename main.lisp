@@ -8,26 +8,33 @@
 
 (defparameter *parse-json-pointer-buffer-length* 16)
 
-;; TODO: accept URI fragment marker
 (defun parse-json-pointer (string)
   (let ((ret ())
+	(string-start 0)
 	(string-len (length string))
 	(buf (make-array *parse-json-pointer-buffer-length*
 			 :element-type 'character :adjustable t :fill-pointer 0))
 	(parsing-escape-token? nil))
+    (declare (type fixnum string-start string-len))
+    ;; prefix and length check
     (when (zerop string-len)
       (return-from parse-json-pointer ()))
-    (unless (char= (char string 0) #\/)
+    (when (char= (char string string-start) #\#) ; accept URI fragment marker
+      (incf string-start)
+      (when (zerop (- string-len string-start))
+	(return-from parse-json-pointer ())))
+    (unless (char= (char string string-start) #\/)
       (error 'json-pointer-syntax-error
 	     :format-control "bad char as root: ~C"
-	     :format-arguments (list (char string 0))))
+	     :format-arguments (list (char string string-start))))
+    ;; 
     (flet ((push-reference-token ()
 	     (when parsing-escape-token?
 	       (error 'json-pointer-syntax-error
 		      :format-control "too short escape token"))
 	     (push (copy-seq buf) ret)
 	     (setf (fill-pointer buf) 0)))
-      (loop for i of-type fixnum from 1 below string-len
+      (loop for i of-type fixnum from (1+ string-start) below string-len
 	 as c of-type character = (char string i)
 
 	 if (char= c #\/)
@@ -54,13 +61,23 @@
      for ptr in parsed-pointer
      ;; do (format t "~&obj ~S~% ptr ~S~%" obj ptr)
      do (typecase obj
-	  (list				; alist
+	  (list
+	   ;; 1. as alist
 	   (let ((entry (assoc ptr obj :test #'string=)))
 	     (unless entry
 	       (error 'json-pointer-not-found-error
 		      :format-control "obj ~A does not have '~A' member"
 		      :format-arguments (list obj ptr)))
-	     (setf obj (cdr entry))))
+	     (setf obj (cdr entry)))
+	   ;; 2. as (ordinal) list
+	   ;; (TODO)
+	   ;; (3. as plist -- required?)
+	   )
+	  (standard-object
+	   ;; cl-json:fluid-object can be treated here.
+	   ;; TODO: get slot list by MOP.
+	   ;; TODO: support structure-object?
+	   (progn))
 	  (array
 	   (let* ((ptr-index
 		   (handler-case (parse-integer ptr)
