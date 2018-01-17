@@ -1,7 +1,13 @@
 (in-package :cl-user)
 
 (defpackage cl-json-pointer
-  (:use :cl :cl-json))
+  (:use :cl :cl-json)
+  (:export
+   #:json-pointer-get
+   #:json-pointer-set
+   ))
+   
+
 
 ;; TODO: node-jsonpointer interface
 ;; - https://github.com/janl/node-jsonpointer

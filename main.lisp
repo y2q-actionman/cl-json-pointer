@@ -56,6 +56,18 @@
 	   (push-reference-token)))
     (nreverse ret)))
 
+
+(defconstant +last-nonexistent-element+
+  '+last-nonexistent-element+)
+;; I think most-negative-fixnum is able to be used, but unsafe.. 
+
+(defun read-reference-token-as-index (reference-token) ; raises parse-error
+  (if (string= reference-token "-")
+      +last-nonexistent-element+
+      (handler-case (parse-integer reference-token)
+	(parse-error () nil))))
+  
+
 (defun traverse-json (parsed-json parsed-pointer)
   (loop with obj = parsed-json
      for ptr in parsed-pointer
@@ -79,8 +91,9 @@
 	   ;; TODO: support structure-object?
 	   (progn))
 	  (array
+	   ;; TODO: support single '-' as the non-existent last element.
 	   (let* ((ptr-index
-		   (handler-case (parse-integer ptr)
+		   (handler-case (read-reference-token-as-index ptr)
 		     (error ()
 		       (error 'json-pointer-not-found-error
 			      :format-control "pointer ~A cannot be read as index (obj is ~A)"
@@ -111,3 +124,7 @@
   (with-open-file (stream path :direction :input)
     (with-json-pointer-style ()
       (cl-json:decode-json stream))))
+
+
+(defgeneric get-by-json-pointer (json-obj json-ptr))
+(defgeneric set-by-json-pointer (json-obj json-ptr))
