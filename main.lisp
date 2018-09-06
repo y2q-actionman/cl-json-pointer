@@ -6,35 +6,24 @@
 (define-condition json-pointer-not-found-error (simple-error)
   ())
 
-(defparameter *parse-json-pointer-buffer-length* 16)
+(defconstant +parse-json-pointer-default-buffer-length+ 16)
 
-(defun parse-json-pointer (string)
+(defun parse-json-pointer-main-loop (string start end)
+  (declare (type integer start end))
   (let ((ret ())
-	(string-start 0)
-	(string-len (length string))
-	(buf (make-array *parse-json-pointer-buffer-length*
+	(buf (make-array +parse-json-pointer-default-buffer-length+
 			 :element-type 'character :adjustable t :fill-pointer 0))
 	(parsing-escape-token? nil))
-    (declare (type fixnum string-start string-len))
-    ;; prefix and length check
-    (when (zerop string-len)
-      (return-from parse-json-pointer ()))
-    (when (char= (char string string-start) #\#) ; accept URI fragment marker
-      (incf string-start)
-      (when (zerop (- string-len string-start))
-	(return-from parse-json-pointer ())))
-    (unless (char= (char string string-start) #\/)
-      (error 'json-pointer-syntax-error
-	     :format-control "bad char as root: ~C"
-	     :format-arguments (list (char string string-start))))
-    ;; 
+    (declare (type string buf)
+	     (dynamic-extent buf)
+	     (type boolean parsing-escape-token?))
     (flet ((push-reference-token ()
 	     (when parsing-escape-token?
 	       (error 'json-pointer-syntax-error
 		      :format-control "too short escape token"))
 	     (push (copy-seq buf) ret)
 	     (setf (fill-pointer buf) 0)))
-      (loop for i of-type fixnum from (1+ string-start) below string-len
+      (loop for i of-type integer from (1+ start) below end
 	 as c of-type character = (char string i)
 
 	 if (char= c #\/)
@@ -55,6 +44,24 @@
 	 finally
 	   (push-reference-token)))
     (nreverse ret)))
+
+(defun parse-json-pointer (string &key (start 0) (end (length string))
+				    (accept-uri-fragment t))
+  (declare (type boolean accept-uri-fragment))
+  ;; prefix and length check
+  (when (zerop (- end start))
+    (return-from parse-json-pointer ()))
+  (let ((char0 (char string start)))
+    (when (and accept-uri-fragment
+	       (char= char0 #\#))
+      (return-from parse-json-pointer
+	(parse-json-pointer string :start (1+ start) :end end :accept-uri-fragment nil)))
+    (unless (char= char0 #\/)
+      (error 'json-pointer-syntax-error
+	     :format-control "bad char as root: ~C"
+	     :format-arguments (list char0))))
+  ;; main loop
+  (parse-json-pointer-main-loop string start end))
 
 
 (defconstant +last-nonexistent-element+
@@ -113,18 +120,6 @@
 		  :format-arguments (list obj ptr))))
      finally
        (return obj)))
-
-(defmacro with-json-pointer-style (() &body body)
-  `(cl-json:bind-custom-vars (:array-type 'vector)
-     (let ((cl-json:*json-identifier-name-to-lisp* #'identity))
-       ,@body)))
-  
-
-(defun read-json-file (path)
-  (with-open-file (stream path :direction :input)
-    (with-json-pointer-style ()
-      (cl-json:decode-json stream))))
-
 
 (defgeneric get-by-json-pointer (json-obj json-ptr))
 (defgeneric set-by-json-pointer (json-obj json-ptr))

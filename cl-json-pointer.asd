@@ -1,4 +1,17 @@
 (in-package :cl-user)
 
-(ql:quickload :cl-json)
+(asdf:defsystem #:cl-json-pointer
+  :licence "MIT"
+  :depends-on (#:cl-json)		; fixme
+  :serial t
+  :components ((:file "package")
+               (:file "main")
+	       (:file "cl-json")))
+
+#+ignore 
+(asdf:defsystem #:cl-json-pointer/test
+  :licence "MIT"
+  :depends-on (#:cl-json-pointer)
+  :serial t
+  :components ())
 
