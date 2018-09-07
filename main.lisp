@@ -67,57 +67,67 @@
 ;; I think most-negative-fixnum is able to be used, but unsafe.. 
 
 (defun read-reference-token-as-index (reference-token) ; raises parse-error
-  (if (string= reference-token "-")
-      +last-nonexistent-element+
-      (handler-case (parse-integer reference-token)
-	(parse-error () nil))))
+  (cond ((string= reference-token "-")
+	 +last-nonexistent-element+)
+	((and (> (length reference-token) 1)
+	      (char= (char reference-token 0) #\0))
+	 (error 'json-pointer-not-found-error
+		:format-control "reference token (~A) should not start with 0 as index"
+		:format-arguments (list reference-token)))
+	(t
+	 (handler-case (parse-integer reference-token)
+	   (error ()
+	     (error 'json-pointer-not-found-error
+		    :format-control "reference token (~A) cannot be read as index"
+		    :format-arguments (list reference-token)))))))
   
 
+(defun traverse-by-reference-token (obj rtoken)
+  (typecase obj
+    (list
+     ;; 1. as alist
+     (let ((entry (assoc rtoken obj :test #'string=)))
+       (unless entry
+	 (error 'json-pointer-not-found-error
+		:format-control "obj ~A does not have '~A' member"
+		:format-arguments (list obj rtoken)))
+       (cdr entry))
+     ;; 2. as (ordinal) list
+     ;; (TODO)
+     ;; (3. as plist -- required?)
+     )
+    (standard-object
+     ;; cl-json:fluid-object can be treated here.
+     ;; TODO: get slot list by MOP.
+     ;; TODO: support structure-object?
+     ;; TODO: support condition-object?
+     (assert nil))
+    ;; ???
+    ;; (hash-table
+    ;;  (progn))
+    (array
+     (let* ((array-len (length obj))
+	    (index (read-reference-token-as-index rtoken)))
+       (cond ((eq index +last-nonexistent-element+)
+	      ;; TODO: support single '-' as the non-existent last element.
+	      ;; - make a closure as a reference?
+	      (assert nil () "under implementation"))
+	     ((or (< index 0) (<= array-len index))
+	      (error 'json-pointer-not-found-error
+		     :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
+		     :format-arguments (list index rtoken obj)))
+	     (t
+	      (aref obj index)))))
+    (t
+     (error 'json-pointer-not-found-error
+	    :format-control "obj ~A is not an array or an object (pointer is ~A)"
+	    :format-arguments (list obj rtoken)))))
+
 (defun traverse-json (parsed-json parsed-pointer)
-  (loop with obj = parsed-json
-     for ptr in parsed-pointer
-     ;; do (format t "~&obj ~S~% ptr ~S~%" obj ptr)
-     do (typecase obj
-	  (list
-	   ;; 1. as alist
-	   (let ((entry (assoc ptr obj :test #'string=)))
-	     (unless entry
-	       (error 'json-pointer-not-found-error
-		      :format-control "obj ~A does not have '~A' member"
-		      :format-arguments (list obj ptr)))
-	     (setf obj (cdr entry)))
-	   ;; 2. as (ordinal) list
-	   ;; (TODO)
-	   ;; (3. as plist -- required?)
-	   )
-	  (standard-object
-	   ;; cl-json:fluid-object can be treated here.
-	   ;; TODO: get slot list by MOP.
-	   ;; TODO: support structure-object?
-	   (progn))
-	  (array
-	   ;; TODO: support single '-' as the non-existent last element.
-	   (let* ((ptr-index
-		   (handler-case (read-reference-token-as-index ptr)
-		     (error ()
-		       (error 'json-pointer-not-found-error
-			      :format-control "pointer ~A cannot be read as index (obj is ~A)"
-			      :format-arguments (list ptr obj)))))
-		  (array-len (length obj))
-		  (index (if (>= ptr-index 0)
-			     ptr-index
-			     (- array-len ptr-index))))
-	     (unless (and (<= 0 index) (< index array-len))
-	       (error 'json-pointer-not-found-error
-		      :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
-		      :format-arguments (list index ptr obj)))
-	     (setf obj (aref obj index))))
-	  (t
-	   (error 'json-pointer-not-found-error
-		  :format-control "obj ~A is not an array or an object (pointer is ~A)"
-		  :format-arguments (list obj ptr))))
-     finally
-       (return obj)))
+  (loop for obj = parsed-json then (traverse-by-reference-token obj rtoken)
+     for (rtoken . rest-ptr) on parsed-pointer
+     ;; do (format t "~&obj ~S~% rtoken ~S, rest-ptr ~S~%" obj rtoken rest-ptr)
+     finally (return obj)))
 
 (defgeneric get-by-json-pointer (json-obj json-ptr))
 (defgeneric set-by-json-pointer (json-obj json-ptr))
