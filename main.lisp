@@ -8,60 +8,58 @@
 
 (defconstant +parse-json-pointer-default-buffer-length+ 16)
 
-(defun parse-json-pointer-main-loop (string start end)
-  (declare (type integer start end))
-  (let ((ret ())
-	(buf (make-array +parse-json-pointer-default-buffer-length+
-			 :element-type 'character :adjustable t :fill-pointer 0))
-	(parsing-escape-token? nil))
+(defun parse-json-pointer-from-stream (stream &key (accept-uri-fragment t))
+  ;; checks '#'
+  (when accept-uri-fragment
+    (let ((char0 (read-char stream nil :eof)))
+      (case char0
+	(#\# (progn))			; '#' accepted
+	(:eof (progn))			; do not unread EOF.
+	(otherwise (unread-char char0 stream)))))
+  ;; checks '/' at the beginning, and consume it here.
+  (let ((char0 (read-char stream nil :eof)))
+    (case char0
+      (:eof ; I think RFC6901 says an empty string should be accepted.
+       (return-from parse-json-pointer-from-stream nil))
+      (#\/
+       (progn))				; ok
+      (otherwise
+       (error 'json-pointer-syntax-error
+	      :format-control "Not started by '/', appeared '~A'"
+	      :format-arguments (list char0)))))
+  ;; main loop
+  (let ((buf (make-array +parse-json-pointer-default-buffer-length+
+			 :element-type 'character :adjustable t :fill-pointer 0)))
     (declare (type string buf)
-	     (dynamic-extent buf)
-	     (type boolean parsing-escape-token?))
-    (flet ((push-reference-token ()
-	     (when parsing-escape-token?
-	       (error 'json-pointer-syntax-error
-		      :format-control "too short escape token"))
-	     (push (copy-seq buf) ret)
-	     (setf (fill-pointer buf) 0)))
-      (loop for i of-type integer from (1+ start) below end
-	 as c of-type character = (char string i)
-
-	 if (char= c #\/)
-	 do (push-reference-token)
-	 else if parsing-escape-token?
+	     (dynamic-extent buf))
+    (flet ((make-reference-token ()
+	     (prog1 (copy-seq buf)
+	       (setf (fill-pointer buf) 0))))
+      (loop with parsing-escape-token? of-type boolean = nil
+	 for c of-type (or symbol null) = (read-char stream nil :eof)
+	 if parsing-escape-token?
 	 do (case c
 	      (#\0 (vector-push-extend #\~ buf))
 	      (#\1 (vector-push-extend #\/ buf))
 	      (otherwise
 	       (error 'json-pointer-syntax-error
-		      :format-control "bad char as escape: ~C"
+		      :format-control "bad char as escape: ~A"
 		      :format-arguments (list c))))
 	   (setf parsing-escape-token? nil)
-	 else if (char= #\~ c)
+	 else if (eq c :eof)
+	 collect (make-reference-token)
+	 and do (loop-finish)
+	 else if (eq c #\/)
+	 collect (make-reference-token)
+	 else if (eq c #\~)
 	 do (setf parsing-escape-token? t)
 	 else
-	 do (vector-push-extend c buf)
-	 finally
-	   (push-reference-token)))
-    (nreverse ret)))
-
+	 do (vector-push-extend c buf)))))
+    
 (defun parse-json-pointer (string &key (start 0) (end (length string))
 				    (accept-uri-fragment t))
-  (declare (type boolean accept-uri-fragment))
-  ;; prefix and length check
-  (when (zerop (- end start))
-    (return-from parse-json-pointer ()))
-  (let ((char0 (char string start)))
-    (when (and accept-uri-fragment
-	       (char= char0 #\#))
-      (return-from parse-json-pointer
-	(parse-json-pointer string :start (1+ start) :end end :accept-uri-fragment nil)))
-    (unless (char= char0 #\/)
-      (error 'json-pointer-syntax-error
-	     :format-control "bad char as root: ~C"
-	     :format-arguments (list char0))))
-  ;; main loop
-  (parse-json-pointer-main-loop string start end))
+  (with-input-from-string (in string :start start :end end)
+    (parse-json-pointer-from-stream in :accept-uri-fragment accept-uri-fragment)))
 
 
 (defconstant +last-nonexistent-element+
