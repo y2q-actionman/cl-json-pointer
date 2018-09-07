@@ -1,5 +1,10 @@
 (in-package :cl-json-pointer)
 
+;;; TODO
+#+ignore
+(defclass parsed-json-pointer ()
+  ((token-list :initarg :token-list :initform () :accessor pjp-token-list)))
+
 (define-condition json-pointer-syntax-error (simple-error)
   ())
 
@@ -80,39 +85,65 @@
 	     (error 'json-pointer-not-found-error
 		    :format-control "reference token (~A) cannot be read as index"
 		    :format-arguments (list reference-token)))))))
-  
+
+(defun alist-like-p (list)
+  (every #'consp list))
+
+(defvar *traverse-consider-plist* nil
+  ;; I think there is no way to define `plist-like-p', because plist
+  ;; does not restricted. Whether its keys are compared by `eq'
+  ;; (http://www.lispworks.com/documentation/HyperSpec/Body/f_eq.htm),
+  ;; I think I should not assume the keys are always a symbol.
+  "If this is T, cl-json-pointer considers plists at traversaling")
 
 (defun traverse-by-reference-token (obj rtoken)
   (typecase obj
     (list
-     ;; 1. as alist
-     (let ((entry (assoc rtoken obj :test #'string=)))
-       (unless entry
-	 (error 'json-pointer-not-found-error
-		:format-control "obj ~A does not have '~A' member"
-		:format-arguments (list obj rtoken)))
-       (cdr entry))
-     ;; 2. as (ordinal) list
-     ;; (TODO)
-     ;; (3. as plist -- required?)
-     )
+     ;; As an alist
+     (when (alist-like-p obj)
+       (ignore-errors
+	 (alexandria:when-let ((entry (assoc rtoken obj :test #'string=)))
+	   (return-from traverse-by-reference-token
+	     (cdr entry)))))
+     ;; As a plist (required?)
+     (when *traverse-consider-plist*
+       (ignore-errors
+	 (alexandria:when-let ((value (getf obj rtoken)))
+	   (return-from traverse-by-reference-token
+	     value))))
+     ;; As a (ordinal) list
+     (let ((obj-len (length obj))
+	   (index (read-reference-token-as-index rtoken)))
+       (cond ((eq index +last-nonexistent-element+) ; see below
+	      (assert nil () "under implementation"))
+	     ((or (< index 0) (<= obj-len index))
+	      (error 'json-pointer-not-found-error
+		     :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
+		     :format-arguments (list index rtoken obj)))
+	     (t
+	      (return-from traverse-by-reference-token
+		(nth index obj)))))
+     ;; Unfortunately..
+     (error 'json-pointer-not-found-error
+	    :format-control "obj ~A does not have '~A' member"
+	    :format-arguments (list obj rtoken)))
     (standard-object
      ;; cl-json:fluid-object can be treated here.
      ;; TODO: get slot list by MOP.
      ;; TODO: support structure-object?
      ;; TODO: support condition-object?
-     (assert nil))
+     (assert nil () "under implementation"))
     ;; ???
     ;; (hash-table
     ;;  (progn))
     (array
-     (let* ((array-len (length obj))
-	    (index (read-reference-token-as-index rtoken)))
+     (let ((obj-len (length obj))
+	   (index (read-reference-token-as-index rtoken)))
        (cond ((eq index +last-nonexistent-element+)
 	      ;; TODO: support single '-' as the non-existent last element.
 	      ;; - make a closure as a reference?
 	      (assert nil () "under implementation"))
-	     ((or (< index 0) (<= array-len index))
+	     ((or (< index 0) (<= obj-len index))
 	      (error 'json-pointer-not-found-error
 		     :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
 		     :format-arguments (list index rtoken obj)))

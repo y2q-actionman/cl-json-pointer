@@ -2,7 +2,7 @@
 
 (asdf:defsystem #:cl-json-pointer
   :licence "MIT"
-  :depends-on (#:cl-json)		; fixme
+  :depends-on (#:alexandria #:cl-json)	; fixme
   :serial t
   :components ((:file "package")
                (:file "main")
