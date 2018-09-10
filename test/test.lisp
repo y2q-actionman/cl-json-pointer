@@ -46,3 +46,12 @@
 		       cas ptr result))))
       (loop for c in *rfc6901-example-keys*
 	 do (dt c)))))
+
+
+(defclass test-class ()
+  ((hoge :initform 'hoge-value)))
+
+(defun test-traverse-json-2 ()
+  (let ((obj (make-instance 'test-class))
+	(ptr "/hoge"))
+    (traverse-json obj (parse-json-pointer ptr))))

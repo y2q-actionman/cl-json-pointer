@@ -2,6 +2,12 @@
 
 (defpackage cl-json-pointer
   (:use :cl :cl-json)
+  (:import-from :alexandria
+		#:when-let)
+  (:import-from :closer-mop
+		#:class-slots
+		#:slot-definition-name
+		#:slot-value-using-class)
   (:export
    #:json-pointer-get
    #:json-pointer-set

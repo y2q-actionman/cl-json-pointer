@@ -86,6 +86,13 @@
 		    :format-control "reference token (~A) cannot be read as index"
 		    :format-arguments (list reference-token)))))))
 
+
+(defgeneric traverse-by-reference-token (obj rtoken)
+  (:method (obj rtoken)
+    (error 'json-pointer-not-found-error
+	   :format-control "obj ~A is not an array or an object (pointer is ~A)"
+	   :format-arguments (list obj rtoken))))
+
 (defun alist-like-p (list)
   (every #'consp list))
 
@@ -96,63 +103,69 @@
   ;; I think I should not assume the keys are always a symbol.
   "If this is T, cl-json-pointer considers plists at traversaling")
 
-(defun traverse-by-reference-token (obj rtoken)
-  (typecase obj
-    (list
-     ;; As an alist
-     (when (alist-like-p obj)
-       (ignore-errors
-	 (alexandria:when-let ((entry (assoc rtoken obj :test #'string=)))
+(defmethod traverse-by-reference-token ((obj list) rtoken)
+  ;; As an alist
+  (when (alist-like-p obj)
+    (ignore-errors
+      (when-let ((entry (assoc rtoken obj :test #'string=)))
+	(return-from traverse-by-reference-token
+	  (cdr entry)))))
+  ;; As a plist (required?)
+  (when *traverse-consider-plist*
+    (ignore-errors
+      (when-let ((value (getf obj rtoken)))
+	(return-from traverse-by-reference-token
+	  value))))
+  ;; As a (ordinal) list
+  (let ((obj-len (length obj))
+	(index (read-reference-token-as-index rtoken)))
+    (cond ((eq index +last-nonexistent-element+) ; see below
+	   (assert nil () "under implementation"))
+	  ((or (< index 0) (<= obj-len index))
+	   (error 'json-pointer-not-found-error
+		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
+		  :format-arguments (list index rtoken obj)))
+	  (t
 	   (return-from traverse-by-reference-token
-	     (cdr entry)))))
-     ;; As a plist (required?)
-     (when *traverse-consider-plist*
-       (ignore-errors
-	 (alexandria:when-let ((value (getf obj rtoken)))
-	   (return-from traverse-by-reference-token
-	     value))))
-     ;; As a (ordinal) list
-     (let ((obj-len (length obj))
-	   (index (read-reference-token-as-index rtoken)))
-       (cond ((eq index +last-nonexistent-element+) ; see below
-	      (assert nil () "under implementation"))
-	     ((or (< index 0) (<= obj-len index))
-	      (error 'json-pointer-not-found-error
-		     :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
-		     :format-arguments (list index rtoken obj)))
-	     (t
-	      (return-from traverse-by-reference-token
-		(nth index obj)))))
-     ;; Unfortunately..
-     (error 'json-pointer-not-found-error
-	    :format-control "obj ~A does not have '~A' member"
-	    :format-arguments (list obj rtoken)))
-    (standard-object
-     ;; cl-json:fluid-object can be treated here.
-     ;; TODO: get slot list by MOP.
-     ;; TODO: support structure-object?
-     ;; TODO: support condition-object?
-     (assert nil () "under implementation"))
-    ;; ???
-    ;; (hash-table
-    ;;  (progn))
-    (array
-     (let ((obj-len (length obj))
-	   (index (read-reference-token-as-index rtoken)))
-       (cond ((eq index +last-nonexistent-element+)
-	      ;; TODO: support single '-' as the non-existent last element.
-	      ;; - make a closure as a reference?
-	      (assert nil () "under implementation"))
-	     ((or (< index 0) (<= obj-len index))
-	      (error 'json-pointer-not-found-error
-		     :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
-		     :format-arguments (list index rtoken obj)))
-	     (t
-	      (aref obj index)))))
-    (t
-     (error 'json-pointer-not-found-error
-	    :format-control "obj ~A is not an array or an object (pointer is ~A)"
-	    :format-arguments (list obj rtoken)))))
+	     (nth index obj)))))
+  ;; Unfortunately..
+  (error 'json-pointer-not-found-error
+	 :format-control "obj ~A does not have '~A' member"
+	 :format-arguments (list obj rtoken)))
+
+(defun compare-string-by-case (a b &optional (case (readtable-case *readtable*)))
+  (ecase case
+    ((:upcase :downcase) (string-equal a b))
+    ((:preserve :invert) (string= a b))))
+
+(defmethod traverse-by-reference-token ((obj standard-object) rtoken)
+  ;; cl-json:fluid-object can be treated here.
+  (loop with class = (class-of obj)
+     for slot in (class-slots class)
+     as slot-name = (slot-definition-name slot)
+     when (compare-string-by-case rtoken slot-name)
+     return (slot-value-using-class class obj slot))
+  ;; TODO: support structure-object?
+  ;; TODO: support condition-object?
+  )
+
+(defmethod traverse-by-reference-token ((obj hash-table) rtoken)
+  ;; ???
+  (assert nil () "under implementation"))
+
+(defmethod traverse-by-reference-token ((obj array) rtoken)
+  (let ((obj-len (length obj))
+	(index (read-reference-token-as-index rtoken)))
+    (cond ((eq index +last-nonexistent-element+)
+	   ;; TODO: support single '-' as the non-existent last element.
+	   ;; - make a closure as a reference?
+	   (assert nil () "under implementation"))
+	  ((or (< index 0) (<= obj-len index))
+	   (error 'json-pointer-not-found-error
+		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
+		  :format-arguments (list index rtoken obj)))
+	  (t
+	   (aref obj index)))))
 
 (defun traverse-json (parsed-json parsed-pointer)
   (loop for obj = parsed-json then (traverse-by-reference-token obj rtoken)
