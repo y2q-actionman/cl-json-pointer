@@ -2,7 +2,9 @@
 
 (asdf:defsystem #:cl-json-pointer
   :licence "MIT"
-  :depends-on (#:alexandria #:closer-mop #:cl-json) ; fixme
+  :depends-on (#:alexandria #:closer-mop)
+  ;; asdf 3 says `:weakly-depends-on' is deprecated..
+  :weakly-depends-on (#:cl-json)
   :serial t
   :components ((:file "package")
                (:file "main")

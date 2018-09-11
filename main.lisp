@@ -68,10 +68,10 @@
 
 
 (defconstant +last-nonexistent-element+
-  '+last-nonexistent-element+)
-;; I think most-negative-fixnum is able to be used, but unsafe.. 
+  '+last-nonexistent-element+
+  "A placeholder indicates 'the (nonexistent) member after the last array element', denoted by '-'")
 
-(defun read-reference-token-as-index (reference-token) ; raises parse-error
+(defun read-reference-token-as-index (reference-token)
   (cond ((string= reference-token "-")
 	 +last-nonexistent-element+)
 	((and (> (length reference-token) 1)
@@ -87,8 +87,10 @@
 		    :format-arguments (list reference-token)))))))
 
 
-(defgeneric traverse-by-reference-token (obj rtoken)
-  (:method (obj rtoken)
+(defgeneric traverse-by-reference-token (obj rtoken &optional make-setter)
+  (:documentation "Traverses an object with a reference token, and returns three values: a referred object, existence (boolean), and a closure can be used as a setter.")
+  (:method (obj rtoken &optional make-setter)
+    (declare (ignore make-setter))
     (error 'json-pointer-not-found-error
 	   :format-control "obj ~A is not an array or an object (pointer is ~A)"
 	   :format-arguments (list obj rtoken))))
@@ -103,31 +105,51 @@
   ;; I think I should not assume the keys are always a symbol.
   "If this is T, cl-json-pointer considers plists at traversaling")
 
-(defmethod traverse-by-reference-token ((obj list) rtoken)
+(defmethod traverse-by-reference-token ((obj list) rtoken &optional make-setter)
   ;; As an alist
   (when (alist-like-p obj)
-    (ignore-errors
+    (ignore-errors			; TODO: I should use like `string=-no-error' one.
       (when-let ((entry (assoc rtoken obj :test #'string=)))
 	(return-from traverse-by-reference-token
-	  (cdr entry)))))
+	  (values (cdr entry)
+		  entry
+		  (if make-setter
+		      (named-lambda set-to-this-alist (x)
+			(setf (cdr entry) x))))))))
   ;; As a plist (required?)
   (when *traverse-consider-plist*
-    (ignore-errors
-      (when-let ((value (getf obj rtoken)))
-	(return-from traverse-by-reference-token
-	  value))))
+    (ignore-errors			; TODO: see above.
+      (loop for plist-head on obj by #'cddr
+	 as (k v) = plist-head
+	 when (string= k rtoken) ; plist often uses `eq', but we use `string='.
+	 do (return-from traverse-by-reference-token
+	      (values v
+		      plist-head
+		      (if make-setter
+			  (named-lambda set-to-this-plist (x)
+			    (setf (cadr plist-head) x))))))))
   ;; As a (ordinal) list
-  (let ((obj-len (length obj))
-	(index (read-reference-token-as-index rtoken)))
-    (cond ((eq index +last-nonexistent-element+) ; see below
-	   (assert nil () "under implementation"))
-	  ((or (< index 0) (<= obj-len index))
+  (when-let ((index (ignore-errors
+		      (read-reference-token-as-index rtoken))))
+    (cond ((eq index +last-nonexistent-element+)
+	   (return-from traverse-by-reference-token
+	     (values nil
+		     nil
+		     (if make-setter
+			 (named-lambda add-to-this-list-tail (x)
+			   (setf (cdr (last obj)) (list x)))))))
+	  ((or (< index 0) (<= (length obj) index))
 	   (error 'json-pointer-not-found-error
 		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
 		  :format-arguments (list index rtoken obj)))
 	  (t
-	   (return-from traverse-by-reference-token
-	     (nth index obj)))))
+	   (let ((this-cons (nthcdr index obj)))
+	     (return-from traverse-by-reference-token
+	       (values (car this-cons)
+		       this-cons
+		       (if make-setter
+			   (named-lambda set-to-this-list (x)
+			     (setf (car this-cons) x)))))))))
   ;; Unfortunately..
   (error 'json-pointer-not-found-error
 	 :format-control "obj ~A does not have '~A' member"
@@ -138,34 +160,54 @@
     ((:upcase :downcase) (string-equal a b))
     ((:preserve :invert) (string= a b))))
 
-(defmethod traverse-by-reference-token ((obj standard-object) rtoken)
+(defmethod traverse-by-reference-token ((obj standard-object) rtoken &optional make-setter)
   ;; cl-json:fluid-object can be treated here.
   (loop with class = (class-of obj)
      for slot in (class-slots class)
      as slot-name = (slot-definition-name slot)
      when (compare-string-by-case rtoken slot-name)
-     return (slot-value-using-class class obj slot))
+     return
+       (let ((bound? (slot-boundp-using-class class obj slot)))
+	 (values (slot-value-using-class class obj slot)
+		 bound?
+		 (if make-setter
+		     (named-lambda set-to-this-slot (x)
+		       (setf (slot-value-using-class class obj slot) x))))))
   ;; TODO: support structure-object?
   ;; TODO: support condition-object?
   )
 
-(defmethod traverse-by-reference-token ((obj hash-table) rtoken)
-  ;; ???
-  (assert nil () "under implementation"))
+(defmethod traverse-by-reference-token ((obj hash-table) rtoken &optional make-setter)
+  (multiple-value-bind (value exists?)
+      (gethash rtoken obj)
+    (values value
+	    exists?
+	    (if make-setter
+		(named-lambda set-to-this-hash-table (x)
+		  (setf (gethash rtoken obj) x))))))
 
-(defmethod traverse-by-reference-token ((obj array) rtoken)
+(defmethod traverse-by-reference-token ((obj array) rtoken &optional make-setter)
   (let ((obj-len (length obj))
 	(index (read-reference-token-as-index rtoken)))
     (cond ((eq index +last-nonexistent-element+)
-	   ;; TODO: support single '-' as the non-existent last element.
-	   ;; - make a closure as a reference?
-	   (assert nil () "under implementation"))
+	   ;; TODO: what to do if not a fill-pointered vector?
+	   (values nil
+		   nil
+		   (if make-setter
+		       (named-lambda push-to-this-array (x)
+			 (if (adjustable-array-p obj)
+			     (vector-push-extend x obj)
+			     (vector-push x obj))))))
 	  ((or (< index 0) (<= obj-len index))
 	   (error 'json-pointer-not-found-error
 		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
 		  :format-arguments (list index rtoken obj)))
 	  (t
-	   (aref obj index)))))
+	   (values (aref obj index)
+		   index
+		   (if make-setter
+		       (named-lambda set-to-this-array (x)
+			 (setf (aref obj index) x))))))))
 
 (defun traverse-json (parsed-json parsed-pointer)
   (loop for obj = parsed-json then (traverse-by-reference-token obj rtoken)
