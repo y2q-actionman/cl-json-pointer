@@ -7,7 +7,9 @@
   :weakly-depends-on (#:cl-json)
   :serial t
   :components ((:file "package")
-               (:file "main")
+	       (:file "condition")
+               (:file "parser")
+               (:file "traversal")
 	       (:file "cl-json")))
 
 #+ignore 
