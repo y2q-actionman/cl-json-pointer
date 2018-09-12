@@ -41,7 +41,7 @@
   (let ((json (read-json-file *rfc6901-example-path*)))
     (flet ((dt (cas)
 	     (let* ((ptr (parse-json-pointer cas))
-		    (result (traverse-json json ptr)))
+		    (result (traverse-by-json-pointer json ptr)))
 	       (format t "~&pointer ~S, parsed-pointer ~S, result ~S~%"
 		       cas ptr result))))
       (loop for c in *rfc6901-example-keys*
@@ -54,4 +54,4 @@
 (defun test-traverse-json-2 ()
   (let ((obj (make-instance 'test-class))
 	(ptr "/hoge"))
-    (traverse-json obj (parse-json-pointer ptr))))
+    (traverse-by-json-pointer obj (parse-json-pointer ptr))))

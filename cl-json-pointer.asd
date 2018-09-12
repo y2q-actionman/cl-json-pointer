@@ -9,13 +9,16 @@
   :components ((:file "package")
 	       (:file "condition")
                (:file "parser")
-               (:file "traversal")
-	       (:file "cl-json")))
+               (:file "traversal")))
 
-#+ignore 
 (asdf:defsystem #:cl-json-pointer/test
   :licence "MIT"
   :depends-on (#:cl-json-pointer)
   :serial t
-  :components ())
+  :components
+  ((:module "test"
+	    :serial t
+	    :components
+	    ((:file "cl-json.lisp")
+	     (:file "test.lisp")))))
 

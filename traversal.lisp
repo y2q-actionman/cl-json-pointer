@@ -46,29 +46,31 @@
   ;; I think I should not assume the keys are always a symbol.
   "If this is T, cl-json-pointer considers plists at traversaling")
 
+(defun string=-no-error (string1 string2 &rest string=-args)
+  (ignore-errors
+    (apply #'string= string1 string2 string=-args)))
+
 (defmethod traverse-by-reference-token ((obj list) rtoken &optional make-setter)
   ;; As an alist
   (when (alist-like-p obj)
-    (ignore-errors			; TODO: I should use like `string=-no-error' one.
-      (when-let ((entry (assoc rtoken obj :test #'string=)))
-	(return-from traverse-by-reference-token
-	  (values (cdr entry)
-		  entry
-		  (if make-setter
-		      (named-lambda set-to-this-alist (x)
-			(setf (cdr entry) x))))))))
+    (when-let ((entry (assoc rtoken obj :test #'string=-no-error)))
+      (return-from traverse-by-reference-token
+	(values (cdr entry)
+		entry
+		(if make-setter
+		    (named-lambda set-to-this-alist (x)
+		      (setf (cdr entry) x)))))))
   ;; As a plist (required?)
   (when *traverse-consider-plist*
-    (ignore-errors			; TODO: see above.
-      (loop for plist-head on obj by #'cddr
-	 as (k v) = plist-head
-	 when (string= k rtoken) ; plist often uses `eq', but we use `string='.
-	 do (return-from traverse-by-reference-token
-	      (values v
-		      plist-head
-		      (if make-setter
-			  (named-lambda set-to-this-plist (x)
-			    (setf (cadr plist-head) x))))))))
+    (loop for plist-head on obj by #'cddr
+       as (k v) = plist-head
+       when (string=-no-error k rtoken) ; plist often uses `eq', but we use `string='.
+       do (return-from traverse-by-reference-token
+	    (values v
+		    plist-head
+		    (if make-setter
+			(named-lambda set-to-this-plist (x)
+			  (setf (cadr plist-head) x)))))))
   ;; As a (ordinal) list
   (when-let ((index (ignore-errors
 		      (read-reference-token-as-index rtoken))))
@@ -150,11 +152,9 @@
 		       (named-lambda set-to-this-array (x)
 			 (setf (aref obj index) x))))))))
 
-(defun traverse-json (parsed-json parsed-pointer)
+(defun traverse-by-json-pointer (parsed-json parsed-pointer)
+  "Traverses an object with a parsed json-pointer, and returns three values: a referred object, existence (boolean), and a closure can be used as a setter."
   (loop for obj = parsed-json then (traverse-by-reference-token obj rtoken)
      for (rtoken . rest-ptr) on parsed-pointer
      ;; do (format t "~&obj ~S~% rtoken ~S, rest-ptr ~S~%" obj rtoken rest-ptr)
      finally (return obj)))
-
-(defgeneric get-by-json-pointer (json-obj json-ptr))
-(defgeneric set-by-json-pointer (json-obj json-ptr))
