@@ -130,12 +130,15 @@
 	    (if make-setter
 		(setf-lambda (gethash rtoken obj))))))
 
-(defun make-array-tail-adder (array)
-  ;; TODO: what to do if not a fill-pointered vector?
-  (lambda (x)
-    (if (adjustable-array-p array)
-	(vector-push-extend x array)
-	(vector-push x array))))
+(locally
+    (declare #+sbcl(sb-ext:muffle-conditions warning))
+  (defun make-array-tail-adder (array)
+    (declare (type vector array))
+    ;; TODO: what to do if not a fill-pointered vector?
+    (lambda (x)
+      (if (adjustable-array-p array)
+	  (vector-push-extend x array)
+	  (vector-push x array)))))
 
 (defmethod traverse-by-reference-token ((obj array) rtoken &optional make-setter)
   (let ((obj-len (length obj))

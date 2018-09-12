@@ -19,6 +19,6 @@
   ((:module "test"
 	    :serial t
 	    :components
-	    ((:file "cl-json.lisp")
-	     (:file "test.lisp")))))
+	    ((:file "cl-json")
+	     (:file "test")))))
 

@@ -35,7 +35,7 @@
 	     (prog1 (copy-seq buf)
 	       (setf (fill-pointer buf) 0))))
       (loop with parsing-escape-token? of-type boolean = nil
-	 for c of-type (or symbol null) = (read-char stream nil :eof)
+	 for c of-type (or character symbol) = (read-char stream nil :eof)
 	 if parsing-escape-token?
 	 do (case c
 	      (#\0 (vector-push-extend #\~ buf))
