@@ -54,8 +54,9 @@
   `(lambda (x) (setf ,access-form (,key x))))
 
 (defun make-list-tail-adder (list)
+  (declare (type list list))
   ;; TODO: what to do if this is an empty list? (need a parental setter?)
-  (setf-lambda (cdr (last list)) :key list))
+  (lambda (x) (nconc list (list x))))
 
 (defmethod traverse-by-reference-token ((obj list) rtoken &optional make-setter)
   ;; As an alist
@@ -76,26 +77,24 @@
 		    plist-head
 		    (if make-setter
 			(setf-lambda (cadr plist-head)))))))
-  ;; As a (ordinal) list
+  ;; As an ordinal list
   (when-let ((index (ignore-errors
 		      (read-reference-token-as-index rtoken))))
-    (cond ((eq index +last-nonexistent-element+)
-	   (return-from traverse-by-reference-token
-	     (values nil
-		     nil
-		     (if make-setter
-			 (make-list-tail-adder obj)))))
-	  ((or (< index 0) (<= (length obj) index))
-	   (error 'json-pointer-not-found-error
-		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
-		  :format-arguments (list index rtoken obj)))
-	  (t
-	   (let ((this-cons (nthcdr index obj)))
-	     (return-from traverse-by-reference-token
-	       (values (car this-cons)
-		       this-cons
-		       (if make-setter
-			   (setf-lambda (car this-cons)))))))))
+    (when (eq index +last-nonexistent-element+)
+      (return-from traverse-by-reference-token
+	(values nil
+		nil
+		(if make-setter
+		    (make-list-tail-adder obj)))))
+    (if-let ((this-cons (nthcdr index obj)))
+      (return-from traverse-by-reference-token
+	(values (car this-cons)
+		this-cons
+		(if make-setter
+		    (setf-lambda (car this-cons)))))
+      (error 'json-pointer-not-found-error
+	     :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
+	     :format-arguments (list index rtoken obj))))
   ;; Unfortunately..
   (error 'json-pointer-not-found-error
 	 :format-control "obj ~A does not have '~A' member"
@@ -130,25 +129,29 @@
 	    (if make-setter
 		(setf-lambda (gethash rtoken obj))))))
 
-(locally
-    (declare #+sbcl(sb-ext:muffle-conditions warning))
-  (defun make-array-tail-adder (array)
-    (declare (type vector array))
-    ;; TODO: what to do if not a fill-pointered vector?
+(defun make-array-tail-adder (array)
+  (declare (type (array * (*)) array))
+  ;; TODO: what to do if not a fill-pointered vector?
+  (let ((adjustable? (adjustable-array-p array))
+	(has-fill-pointer? (array-has-fill-pointer-p array)))
     (lambda (x)
-      (if (adjustable-array-p array)
-	  (vector-push-extend x array)
-	  (vector-push x array)))))
+      (cond ((and adjustable?
+		  has-fill-pointer?)
+	     (vector-push-extend x array))
+	    ((and has-fill-pointer?
+		  (vector-push x array))) ; uses `vector-push' result as condition.
+	    (t
+	     ;; FIXME!
+	     (error "under implementation -- need adjust-array"))))))
 
 (defmethod traverse-by-reference-token ((obj array) rtoken &optional make-setter)
-  (let ((obj-len (length obj))
-	(index (read-reference-token-as-index rtoken)))
+  (let ((index (read-reference-token-as-index rtoken)))
     (cond ((eq index +last-nonexistent-element+)
 	   (values nil
 		   nil
 		   (if make-setter
 		       (make-array-tail-adder obj))))
-	  ((or (< index 0) (<= obj-len index))
+	  ((not (array-in-bounds-p obj index))
 	   (error 'json-pointer-not-found-error
 		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
 		  :format-arguments (list index rtoken obj)))
