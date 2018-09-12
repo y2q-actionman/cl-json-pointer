@@ -50,6 +50,13 @@
   (ignore-errors
     (apply #'string= string1 string2 string=-args)))
 
+(defmacro setf-lambda (access-form &key (key 'identity))
+  `(lambda (x) (setf ,access-form (,key x))))
+
+(defun make-list-tail-adder (list)
+  ;; TODO: what to do if this is an empty list? (need a parental setter?)
+  (setf-lambda (cdr (last list)) :key list))
+
 (defmethod traverse-by-reference-token ((obj list) rtoken &optional make-setter)
   ;; As an alist
   (when (alist-like-p obj)
@@ -58,8 +65,7 @@
 	(values (cdr entry)
 		entry
 		(if make-setter
-		    (named-lambda set-to-this-alist (x)
-		      (setf (cdr entry) x)))))))
+		    (setf-lambda (cdr entry)))))))
   ;; As a plist (required?)
   (when *traverse-consider-plist*
     (loop for plist-head on obj by #'cddr
@@ -69,8 +75,7 @@
 	    (values v
 		    plist-head
 		    (if make-setter
-			(named-lambda set-to-this-plist (x)
-			  (setf (cadr plist-head) x)))))))
+			(setf-lambda (cadr plist-head)))))))
   ;; As a (ordinal) list
   (when-let ((index (ignore-errors
 		      (read-reference-token-as-index rtoken))))
@@ -79,8 +84,7 @@
 	     (values nil
 		     nil
 		     (if make-setter
-			 (named-lambda add-to-this-list-tail (x)
-			   (setf (cdr (last obj)) (list x)))))))
+			 (make-list-tail-adder obj)))))
 	  ((or (< index 0) (<= (length obj) index))
 	   (error 'json-pointer-not-found-error
 		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
@@ -91,8 +95,7 @@
 	       (values (car this-cons)
 		       this-cons
 		       (if make-setter
-			   (named-lambda set-to-this-list (x)
-			     (setf (car this-cons) x)))))))))
+			   (setf-lambda (car this-cons)))))))))
   ;; Unfortunately..
   (error 'json-pointer-not-found-error
 	 :format-control "obj ~A does not have '~A' member"
@@ -114,8 +117,7 @@
 	 (values (slot-value-using-class class obj slot)
 		 bound?
 		 (if make-setter
-		     (named-lambda set-to-this-slot (x)
-		       (setf (slot-value-using-class class obj slot) x))))))
+		     (setf-lambda (slot-value-using-class class obj slot))))))
   ;; TODO: support structure-object?
   ;; TODO: support condition-object?
   )
@@ -126,21 +128,23 @@
     (values value
 	    exists?
 	    (if make-setter
-		(named-lambda set-to-this-hash-table (x)
-		  (setf (gethash rtoken obj) x))))))
+		(setf-lambda (gethash rtoken obj))))))
+
+(defun make-array-tail-adder (array)
+  ;; TODO: what to do if not a fill-pointered vector?
+  (lambda (x)
+    (if (adjustable-array-p array)
+	(vector-push-extend x array)
+	(vector-push x array))))
 
 (defmethod traverse-by-reference-token ((obj array) rtoken &optional make-setter)
   (let ((obj-len (length obj))
 	(index (read-reference-token-as-index rtoken)))
     (cond ((eq index +last-nonexistent-element+)
-	   ;; TODO: what to do if not a fill-pointered vector?
 	   (values nil
 		   nil
 		   (if make-setter
-		       (named-lambda push-to-this-array (x)
-			 (if (adjustable-array-p obj)
-			     (vector-push-extend x obj)
-			     (vector-push x obj))))))
+		       (make-array-tail-adder obj))))
 	  ((or (< index 0) (<= obj-len index))
 	   (error 'json-pointer-not-found-error
 		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
@@ -149,8 +153,7 @@
 	   (values (aref obj index)
 		   index
 		   (if make-setter
-		       (named-lambda set-to-this-array (x)
-			 (setf (aref obj index) x))))))))
+		       (setf-lambda (aref obj index))))))))
 
 (defun traverse-by-json-pointer (parsed-json parsed-pointer)
   "Traverses an object with a parsed json-pointer, and returns three values: a referred object, existence (boolean), and a closure can be used as a setter."
