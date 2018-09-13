@@ -2,9 +2,6 @@
 
 (defpackage :cl-json-pointer/test
   (:use :cl :cl-json-pointer)
-  (:use :named-readtables)
-  (:import-from #:alexandria
-		#:if-let
-		#:when-let)
+  (:use :alexandria :named-readtables)
   (:export
    #:run))

@@ -24,5 +24,6 @@
 	    ((:file "package")
 	     (:file "reader")
 	     (:file "cl-json")
+	     (:file "test1")
 	     (:file "test")))))
 

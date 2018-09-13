@@ -1,7 +1,7 @@
 (in-package :cl-json-pointer/test)
 (in-readtable cjp-test-syntax)
 
-(alexandria:define-constant +rfc6901-example+
+(define-constant +rfc6901-example+
   #{
    "foo": ["bar", "baz"],
    "": 0,
@@ -16,7 +16,7 @@
 }
   :test 'equal)
 
-(alexandria:define-constant +rfc6901-example-keys+
+(define-constant +rfc6901-example-keys+
   '(""
     "/foo"
     "/foo/0"
@@ -56,4 +56,5 @@
 (defun run ()
   (test-parse-json-pointer)
   (test-traverse-json)
-  (test-traverse-json-2))
+  (test-traverse-json-2)
+  (test1-1))
