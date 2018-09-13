@@ -4,9 +4,19 @@
   '-
   "A symbol indicates 'the (nonexistent) member after the last array element', denoted by '-'")
 
+(deftype parsed-json-pointer ()
+  'list)
+
+(defgeneric parse-json-pointer (pointer &key accept-uri-fragment &allow-other-keys)
+  (:documentation "Parses `pointer' to an internal representation"))
+
+(defmethod parse-json-pointer ((pointer list) &key &allow-other-keys)
+  (check-type pointer parsed-json-pointer)
+  pointer)
+
 (defconstant +parse-json-pointer-default-buffer-length+ 16)
 
-(defun parse-json-pointer-from-stream (stream &key (accept-uri-fragment t))
+(defmethod parse-json-pointer ((stream stream) &key (accept-uri-fragment t))
   ;; checks '#'
   (when accept-uri-fragment
     (let ((char0 (read-char stream nil :eof)))
@@ -18,7 +28,7 @@
   (let ((char0 (read-char stream nil :eof)))
     (case char0
       (:eof ; I think RFC6901 says an empty string should be accepted.
-       (return-from parse-json-pointer-from-stream nil))
+       (return-from parse-json-pointer nil))
       (#\/
        (progn))				; ok
       (otherwise
@@ -58,7 +68,7 @@
 	      (otherwise (vector-push-extend c buf)))))
     (values (nreverse tokens) lne-count)))
 
-(defun parse-json-pointer (string &key (start 0) (end (length string))
-				    (accept-uri-fragment t))
-  (with-input-from-string (in string :start start :end end)
-    (parse-json-pointer-from-stream in :accept-uri-fragment accept-uri-fragment)))
+(defmethod parse-json-pointer ((pointer string) &key (start 0) (end (length pointer))
+						  (accept-uri-fragment t) &allow-other-keys)
+  (with-input-from-string (in pointer :start start :end end)
+    (parse-json-pointer in :accept-uri-fragment accept-uri-fragment)))

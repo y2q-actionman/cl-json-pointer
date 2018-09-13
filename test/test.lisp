@@ -1,7 +1,22 @@
-(in-package :cl-json-pointer)
+(in-package :cl-json-pointer/test)
 
+(alexandria:define-constant +rfc6901-example+
+    "{
+   \"foo\": [\"bar\", \"baz\"],
+   \"\": 0,
+   \"a/b\": 1,
+   \"c%d\": 2,
+   \"e^f\": 3,
+   \"g|h\": 4,
+   \"i\\\\j\": 5,
+   \"k\\\"l\": 6,
+   \" \": 7,
+   \"m~n\": 8
+}"
+  ;; TODO: use reader macro.
+  :test 'equal)
 
-(defvar *rfc6901-example-keys*
+(alexandria:define-constant +rfc6901-example-keys+
   '(""
     "/foo"
     "/foo/0"
@@ -13,39 +28,20 @@
     "/i\\j"
     "/k\"l"
     "/ "
-    "/m~0n"))
+    "/m~0n")
+  :test 'equal)
+
 
 (defun test-parse-json-pointer ()
-  (flet ((dt (cas)
-	   (format t "~&case ~S, parsed ~S~%" cas (parse-json-pointer cas))))
-    (loop for c in *rfc6901-example-keys*
-       do (dt c))))
-
-
-(defmacro define-this-source-pathname-variable (name)
-  `(progn
-     (eval-when (:compile-toplevel)
-       (defparameter ,name *compile-file-truename*))
-     (eval-when (:load-toplevel)
-       (defvar ,name *load-truename*))
-     (eval-when (:execute)
-       (defvar ,name))))
-
-(define-this-source-pathname-variable *this-file-path*)
-
-(defparameter *rfc6901-example-path*
-  (merge-pathnames "rfc6901-example.json"
-		   *this-file-path*))
+  (loop for cas in +rfc6901-example-keys+
+     do (format t "~&case ~S, parsed ~S~%"
+		cas (cl-json-pointer::parse-json-pointer cas))))
 
 (defun test-traverse-json ()
-  (let ((json (read-json-file *rfc6901-example-path*)))
-    (flet ((dt (cas)
-	     (let* ((ptr (parse-json-pointer cas))
-		    (result (traverse-by-json-pointer json ptr)))
-	       (format t "~&pointer ~S, parsed-pointer ~S, result ~S~%"
-		       cas ptr result))))
-      (loop for c in *rfc6901-example-keys*
-	 do (dt c)))))
+  (let ((json (read-json-string +rfc6901-example+)))
+    (loop for cas in +rfc6901-example-keys+
+       do (format t "~&pointer ~S, result ~S~%"
+		    cas (get-by-json-pointer json cas)))))
 
 
 (defclass test-class ()
@@ -54,4 +50,10 @@
 (defun test-traverse-json-2 ()
   (let ((obj (make-instance 'test-class))
 	(ptr "/hoge"))
-    (traverse-by-json-pointer obj (parse-json-pointer ptr))))
+    (get-by-json-pointer obj ptr)))
+
+
+(defun run ()
+  (test-parse-json-pointer)
+  (test-traverse-json)
+  (test-traverse-json-2))
