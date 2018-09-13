@@ -1,9 +1,8 @@
 (in-package :cl-json-pointer)
 
-;;; TODO
-#+ignore
-(defclass parsed-json-pointer ()
-  ((token-list :initarg :token-list :initform () :accessor pjp-token-list)))
+(defconstant +last-nonexistent-element+
+  '-
+  "A symbol indicates 'the (nonexistent) member after the last array element', denoted by '-'")
 
 (defconstant +parse-json-pointer-default-buffer-length+ 16)
 
@@ -28,12 +27,17 @@
 	      :format-arguments (list char0)))))
   ;; main loop
   (let ((buf (make-array +parse-json-pointer-default-buffer-length+
-			 :element-type 'character :adjustable t :fill-pointer 0)))
+			 :element-type 'character :adjustable t :fill-pointer 0))
+	(tokens nil)
+	(lne-count 0))
     (declare (type string buf)
-	     (dynamic-extent buf))
-    (flet ((make-reference-token ()
-	     (prog1 (copy-seq buf)
-	       (setf (fill-pointer buf) 0))))
+	     (dynamic-extent buf)
+	     (type integer lne-count))
+    (flet ((push-reference-token ()
+	     (when (string= buf +last-nonexistent-element+)
+	       (incf lne-count))
+	     (push (copy-seq buf) tokens)
+	     (setf (fill-pointer buf) 0)))
       (loop with parsing-escape-token? of-type boolean = nil
 	 for c of-type (or character symbol) = (read-char stream nil :eof)
 	 if parsing-escape-token?
@@ -45,15 +49,14 @@
 		      :format-control "bad char as escape: ~A"
 		      :format-arguments (list c))))
 	   (setf parsing-escape-token? nil)
-	 else if (eq c :eof)
-	 collect (make-reference-token)
-	 and do (loop-finish)
-	 else if (eq c #\/)
-	 collect (make-reference-token)
-	 else if (eq c #\~)
-	 do (setf parsing-escape-token? t)
 	 else
-	 do (vector-push-extend c buf)))))
+	 do (case c
+	      (:eof (push-reference-token)
+		    (loop-finish))
+	      (#\/ (push-reference-token))
+	      (#\~ (setf parsing-escape-token? t))
+	      (otherwise (vector-push-extend c buf)))))
+    (values (nreverse tokens) lne-count)))
 
 (defun parse-json-pointer (string &key (start 0) (end (length string))
 				    (accept-uri-fragment t))

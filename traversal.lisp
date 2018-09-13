@@ -1,11 +1,7 @@
 (in-package :cl-json-pointer)
 
-(defconstant +last-nonexistent-element+
-  '+last-nonexistent-element+
-  "A placeholder indicates 'the (nonexistent) member after the last array element', denoted by '-'")
-
 (defun read-reference-token-as-index (reference-token)
-  (cond ((string= reference-token "-")
+  (cond ((string= reference-token +last-nonexistent-element+)
 	 +last-nonexistent-element+)
 	((and (> (length reference-token) 1)
 	      (char= (char reference-token 0) #\0))
@@ -59,8 +55,16 @@
   (lambda (x) (nconc list (list x))))
 
 (defmethod traverse-by-reference-token ((obj list) rtoken &optional make-setter)
+  ;; empty. this is problematic for setting.
+  (when (null obj)
+    (return-from traverse-by-reference-token
+      (values nil
+	      obj
+	      (if make-setter
+		  (error "under implementation -- add to nil")))))
   ;; As an alist
   (when (alist-like-p obj)
+    ;; FIXME: what to do if setting to a new key?
     (when-let ((entry (assoc rtoken obj :test #'string=-no-error)))
       (return-from traverse-by-reference-token
 	(values (cdr entry)
@@ -113,7 +117,8 @@
      when (compare-string-by-case rtoken slot-name)
      return
        (let ((bound? (slot-boundp-using-class class obj slot)))
-	 (values (slot-value-using-class class obj slot)
+	 (values (if bound?
+		     (slot-value-using-class class obj slot))
 		 bound?
 		 (if make-setter
 		     (setf-lambda (slot-value-using-class class obj slot))))))
