@@ -12,7 +12,11 @@
 
 (defmethod parse-json-pointer ((pointer list) &key &allow-other-keys)
   (check-type pointer parsed-json-pointer)
-  pointer)
+  (values pointer
+	  ;; TODO: use a symbol for +last-nonexistent-element+ ?
+	  (loop for rtoken in pointer
+	     when (string= rtoken +last-nonexistent-element+)
+	     count it)))
 
 (defconstant +parse-json-pointer-default-buffer-length+ 16)
 

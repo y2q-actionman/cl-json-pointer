@@ -6,3 +6,14 @@ TODO: node-jsonpointer interface
 
 TODO: json query
 - https://github.com/sagold/json-query
+
+
+深く考えずに condition なげまくるか？
+
+- get -> 経路がなければ error なげる。値 nil が返されるなら、それは nil があったということ。
+- exists -> 上と同じだが、 muffle-warning する。
+
+- set -> 経路がなければ error なげる。さらに、set時にerrorする可能性がある。
+
+
+;;; TODO: make a accessor package?

@@ -1,5 +1,9 @@
 (in-package :cl-json-pointer)
 
+(defmacro setf-lambda (access-form &key (key 'identity))
+  "Used for a simple setter."
+  `(lambda (x) (setf ,access-form (,key x))))
+
 (defun read-reference-token-as-index (reference-token)
   (cond ((string= reference-token +last-nonexistent-element+)
 	 +last-nonexistent-element+)
@@ -16,100 +20,127 @@
 		    :format-arguments (list reference-token)))))))
 
 
-(defgeneric traverse-by-reference-token (obj rtoken &optional make-setter)
-  (:documentation "Traverses an object with a reference token, and returns three values: a referred object, existence (boolean), and a closure can be used as a setter.")
-  (:method (obj (rtoken null) &optional make-setter)
-    ;; bottom case 1 -- refers an object with an empty token.
-    (values obj
-	    obj
-	    (if make-setter
-		(error 'json-pointer-not-found-error
-		       :format-control "setting with an empty reference token is not supported"))))
-  (:method (obj rtoken &optional make-setter)
-    ;; bottom case 2 -- refers an unsupprted type object.
-    (declare (ignore make-setter))
-    (error 'json-pointer-not-found-error
-	   :format-control "obj ~A is not an array or an object (pointer is ~A)"
-	   :format-arguments (list obj rtoken))))
+(defgeneric traverse-by-reference-token (obj rtoken make-setter? parental-setter)
+  (:documentation "Traverses an object with a reference token, and returns three values: a referred object, existence (boolean), and a closure can be used as a setter."))
 
-(defun alist-like-p (list)
-  (every #'consp list))
+(defmethod traverse-by-reference-token (obj rtoken make-setter? parental-setter)
+  ;; bottom case 1 -- refers an unsupported type object.
+  (declare (ignore make-setter? parental-setter))
+  (error 'json-pointer-not-found-error
+	 :format-control "obj ~A is not an array or an object (pointer is ~A)"
+	 :format-arguments (list obj rtoken)))
 
-(defvar *traverse-consider-plist* nil
-  ;; I think there is no way to define `plist-like-p', because plist
-  ;; does not restricted. Whether its keys are compared by `eq'
-  ;; (http://www.lispworks.com/documentation/HyperSpec/Body/f_eq.htm),
-  ;; I think I should not assume the keys are always a symbol.
-  "If this is T, cl-json-pointer considers plists at traversaling")
+(defmethod traverse-by-reference-token (obj (rtoken null) make-setter? parental-setter)
+  ;; bottom case 2 -- refers an object with an empty token.
+  (declare (ignore parental-setter))
+  (values obj
+	  obj
+	  (if make-setter?
+	      (error 'json-pointer-access-error
+		     :format-control "setting with an empty reference token is not supported"))))
+
 
 (defun string=-no-error (string1 string2 &rest string=-args)
   (ignore-errors
     (apply #'string= string1 string2 string=-args)))
 
-(defmacro setf-lambda (access-form &key (key 'identity))
-  `(lambda (x) (setf ,access-form (,key x))))
 
-(defun make-list-tail-adder (list)
-  (declare (type list list))
-  ;; TODO: what to do if this is an empty list? (need a parental setter?)
-  (lambda (x) (nconc list (list x))))
+(defun traverse-alist-by-reference-token (alist rtoken make-setter? parental-setter)
+  ;; accepts `nil' as alist.
+  (if-let ((entry (assoc rtoken alist :test #'string=-no-error)))
+    (values (cdr entry)
+	    entry
+	    (if make-setter?
+		(setf-lambda (cdr entry))))
+    (values nil
+	    nil
+	    (if make-setter?
+		(lambda (x)
+		  (setf alist (acons rtoken x alist))
+		  (funcall parental-setter alist))))))
 
-(defmethod traverse-by-reference-token ((obj list) rtoken &optional make-setter)
-  ;; empty. this is problematic for setting.
-  (when (null obj)
-    (return-from traverse-by-reference-token
-      (values nil
-	      obj
-	      (if make-setter
-		  (error "under implementation -- add to nil")))))
-  ;; As an alist
-  (when (alist-like-p obj)
-    ;; FIXME: what to do if setting to a new key?
-    (when-let ((entry (assoc rtoken obj :test #'string=-no-error)))
-      (return-from traverse-by-reference-token
-	(values (cdr entry)
-		entry
-		(if make-setter
-		    (setf-lambda (cdr entry)))))))
-  ;; As a plist (required?)
-  (when *traverse-consider-plist*
-    (loop for plist-head on obj by #'cddr
-       as (k v) = plist-head
-       when (string=-no-error k rtoken) ; plist often uses `eq', but we use `string='.
-       do (return-from traverse-by-reference-token
-	    (values v
+(defun traverse-plist-by-reference-token (plist rtoken make-setter? parental-setter)
+  ;; accepts `nil' as plist.
+  (loop for plist-head on plist by #'cddr
+     as (k v) = plist-head
+     when (string=-no-error k rtoken) ; plist often uses `eq', but we use `string='.
+     return (values v
 		    plist-head
-		    (if make-setter
-			(setf-lambda (cadr plist-head)))))))
-  ;; As an ordinal list
-  (when-let ((index (ignore-errors
-		      (read-reference-token-as-index rtoken))))
-    (when (eq index +last-nonexistent-element+)
-      (return-from traverse-by-reference-token
-	(values nil
-		nil
-		(if make-setter
-		    (make-list-tail-adder obj)))))
-    (if-let ((this-cons (nthcdr index obj)))
-      (return-from traverse-by-reference-token
+		    (if make-setter?
+			(setf-lambda (cadr plist-head))))
+     finally
+       (return (values nil
+		       nil
+		       (if make-setter?
+			   (lambda (x)
+			     (setf plist (list* rtoken x plist))
+			     (funcall parental-setter plist)))))))
+
+(defun traverse-ordinal-list-by-reference-token (list index make-setter? parental-setter)
+  (if (eq index +last-nonexistent-element+)
+      (values nil
+	      nil
+	      (if make-setter?
+		  (lambda (x)
+		    (if list
+			(nconc list (list x))
+			(funcall parental-setter (setf list (list x)))))))
+      (if-let ((this-cons (nthcdr index list)))
 	(values (car this-cons)
 		this-cons
-		(if make-setter
-		    (setf-lambda (car this-cons)))))
-      (error 'json-pointer-not-found-error
-	     :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
-	     :format-arguments (list index rtoken obj))))
-  ;; Unfortunately..
-  (error 'json-pointer-not-found-error
-	 :format-control "obj ~A does not have '~A' member"
-	 :format-arguments (list obj rtoken)))
+		(if make-setter?
+		    (setf-lambda (car this-cons))))
+	(error 'json-pointer-not-found-error
+	       :format-control "Index ~A is out-of-index from ~A"
+	       :format-arguments (list index list)))))
+
+
+(defun alist-like-p (list)
+  (every #'consp list))
+
+(defun plist-like-p (list)
+  (loop for (k nil) on list by #'cddr
+     always (symbolp k)))
+
+(defvar *traverse-consider-plist* nil
+  ;; I think there is no way to define good `plist-like-p', because plist
+  ;; does not restricted. Whether its keys are compared by `eq'
+  ;; (http://www.lispworks.com/documentation/HyperSpec/Body/f_eq.htm),
+  ;; I think I should not assume the keys are always a symbol.
+  "If this is T, cl-json-pointer considers plists at traversaling.")
+
+(defmethod traverse-by-reference-token ((obj list) rtoken make-setter? parental-setter)
+  (if-let ((index (ignore-errors
+		    (read-reference-token-as-index rtoken))))
+    ;; rtoken is ambiguous with index.
+    (cond ((alist-like-p obj)
+	   (traverse-alist-by-reference-token obj rtoken make-setter? parental-setter))
+	  ((and *traverse-consider-plist*
+		(plist-like-p obj))
+	   (traverse-plist-by-reference-token obj rtoken make-setter? parental-setter))
+	  (t
+	   (traverse-ordinal-list-by-reference-token obj index make-setter? parental-setter)))
+    ;; I assume `rtoken' is not index, so considers alist (or plist).
+    (if (and *traverse-consider-plist*
+	     (plist-like-p obj))
+	(traverse-plist-by-reference-token obj rtoken make-setter? parental-setter)
+	(traverse-alist-by-reference-token obj rtoken make-setter? parental-setter))))
+
+(defmethod traverse-by-reference-token ((obj null) rtoken make-setter? parental-setter)
+  ;; empty. this is problematic for setting.
+  (if-let ((index (ignore-errors
+		    (read-reference-token-as-index rtoken))))
+    ;; rtoken is ambiguous with index.
+    (traverse-ordinal-list-by-reference-token obj index make-setter? parental-setter)
+    ;; I assume `rtoken' is not index, so considers alist (or plist).
+    (traverse-alist-by-reference-token obj rtoken make-setter? parental-setter)))
 
 (defun compare-string-by-case (a b &optional (case (readtable-case *readtable*)))
   (ecase case
     ((:upcase :downcase) (string-equal a b))
     ((:preserve :invert) (string= a b))))
 
-(defmethod traverse-by-reference-token ((obj standard-object) rtoken &optional make-setter)
+(defmethod traverse-by-reference-token ((obj standard-object) rtoken make-setter? parental-setter)
   ;; cl-json:fluid-object can be treated here.
   (loop with class = (class-of obj)
      for slot in (class-slots class)
@@ -120,42 +151,59 @@
 	 (values (if bound?
 		     (slot-value-using-class class obj slot))
 		 bound?
-		 (if make-setter
-		     (setf-lambda (slot-value-using-class class obj slot))))))
+		 (if make-setter?
+		     (setf-lambda (slot-value-using-class class obj slot)))))
+     finally
+       (return
+	 (values nil
+		 nil
+		 (if make-setter?
+		     (lambda (x)
+		       (declare (ignore x))
+		       (error 'json-pointer-access-error
+			      :format-control "object ~A does not have '~A' slot"
+			      :format-arguments (list obj rtoken)))))))
   ;; TODO: support structure-object?
   ;; TODO: support condition-object?
   )
 
-(defmethod traverse-by-reference-token ((obj hash-table) rtoken &optional make-setter)
+(defmethod traverse-by-reference-token ((obj hash-table) rtoken make-setter? parental-setter)
+  (declare (ignore parental-setter))
   (multiple-value-bind (value exists?)
       (gethash rtoken obj)
     (values value
 	    exists?
-	    (if make-setter
+	    (if make-setter?
 		(setf-lambda (gethash rtoken obj))))))
 
-(defun make-array-tail-adder (array)
-  (declare (type (array * (*)) array))
-  ;; TODO: what to do if not a fill-pointered vector?
-  (let ((adjustable? (adjustable-array-p array))
-	(has-fill-pointer? (array-has-fill-pointer-p array)))
-    (lambda (x)
+(defun make-array-tail-adder (array parental-setter)
+  (lambda (x)
+    (check-type array (array * (*)))
+    (let ((adjustable? (adjustable-array-p array))
+	  (has-fill-pointer? (array-has-fill-pointer-p array)))
       (cond ((and adjustable?
 		  has-fill-pointer?)
 	     (vector-push-extend x array))
 	    ((and has-fill-pointer?
+		  (or (pprint 2) t)
 		  (vector-push x array))) ; uses `vector-push' result as condition.
 	    (t
-	     ;; FIXME!
-	     (error "under implementation -- need adjust-array"))))))
+	     (let* ((original-length (length array))
+		    (new-array (make-array (* 2 original-length)
+					   :adjustable t
+					   :fill-pointer original-length)))
+	       (replace new-array array)
+	       (setf array new-array))
+	     (funcall parental-setter array) ; FIXME: add a type check??
+	     (vector-push x array))))))
 
-(defmethod traverse-by-reference-token ((obj array) rtoken &optional make-setter)
+(defmethod traverse-by-reference-token ((obj array) rtoken make-setter? parental-setter)
   (let ((index (read-reference-token-as-index rtoken)))
     (cond ((eq index +last-nonexistent-element+)
 	   (values nil
 		   nil
-		   (if make-setter
-		       (make-array-tail-adder obj))))
+		   (if make-setter?
+		       (make-array-tail-adder obj parental-setter))))
 	  ((not (array-in-bounds-p obj index))
 	   (error 'json-pointer-not-found-error
 		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
@@ -163,12 +211,21 @@
 	  (t
 	   (values (aref obj index)
 		   index
-		   (if make-setter
+		   (if make-setter?
 		       (setf-lambda (aref obj index))))))))
 
-(defun traverse-by-json-pointer (parsed-json parsed-pointer)
-  "Traverses an object with a parsed json-pointer, and returns three values: a referred object, existence (boolean), and a closure can be used as a setter."
-  (loop for obj = parsed-json then (traverse-by-reference-token obj rtoken)
-     for (rtoken . rest-ptr) on parsed-pointer
-     ;; do (format t "~&obj ~S~% rtoken ~S, rest-ptr ~S~%" obj rtoken rest-ptr)
-     finally (return obj)))
+(defun traverse-by-json-pointer (obj parsed-pointer &key (always-make-setter nil))
+  "Traverses an object with a parsed json-pointer, and returns three
+values: a referred object, existence (boolean), and a closure can be
+used as a setter."
+  (loop with last-setter = nil
+     for (rtoken . next?) on parsed-pointer
+     do (multiple-value-bind (value exists? setter)
+	    (traverse-by-reference-token obj rtoken
+					 (or always-make-setter (not next?))
+					 last-setter)
+	  (when (null next?)
+	    (return
+	      (values value exists? setter)))
+	  (setf obj value
+		last-setter setter))))

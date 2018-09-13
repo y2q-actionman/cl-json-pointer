@@ -11,6 +11,7 @@
 		#:slot-boundp-using-class
 		#:slot-value-using-class)
   (:export
+   #:parse-json-pointer
    #:get-by-json-pointer
    #:exists-by-json-pointer
    #:set-by-json-pointer))
