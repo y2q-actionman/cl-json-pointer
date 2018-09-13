@@ -1,19 +1,19 @@
 (in-package :cl-json-pointer/test)
+(in-readtable cjp-test-syntax)
 
 (alexandria:define-constant +rfc6901-example+
-    "{
-   \"foo\": [\"bar\", \"baz\"],
-   \"\": 0,
-   \"a/b\": 1,
-   \"c%d\": 2,
-   \"e^f\": 3,
-   \"g|h\": 4,
-   \"i\\\\j\": 5,
-   \"k\\\"l\": 6,
-   \" \": 7,
-   \"m~n\": 8
-}"
-  ;; TODO: use reader macro.
+  #{
+   "foo": ["bar", "baz"],
+   "": 0,
+   "a/b": 1,
+   "c%d": 2,
+   "e^f": 3,
+   "g|h": 4,
+   "i\\j": 5,
+   "k\"l": 6,
+   " ": 7,
+   "m~n": 8
+}
   :test 'equal)
 
 (alexandria:define-constant +rfc6901-example-keys+

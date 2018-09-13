@@ -1,4 +1,4 @@
-(in-package :cl-json-pointer)
+(in-package :cl-json-pointer/test)
 
 (defmacro define-this-source-pathname-variable (name)
   `(progn
