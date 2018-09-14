@@ -14,6 +14,3 @@ TODO: json query
 - exists -> 上と同じだが、 muffle-warning する。
 
 - set -> 経路がなければ error なげる。さらに、set時にerrorする可能性がある。
-
-
-;;; TODO: make a accessor package?

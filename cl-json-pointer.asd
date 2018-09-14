@@ -12,9 +12,19 @@
                (:file "traversal")
 	       (:file "interface")))
 
+(asdf:defsystem #:cl-json-pointer/synonyms
+  :licence "MIT"
+  :depends-on (#:cl-json-pointer)
+  :serial t
+  :components
+  ((:module "synonyms"
+	    :components
+	    ((:file "synonyms")))))
+
 (asdf:defsystem #:cl-json-pointer/test
   :licence "MIT"
-  :depends-on (#:cl-json-pointer #:named-readtables
+  :depends-on (#:cl-json-pointer #:cl-json-pointer/synonyms
+	       #:named-readtables
 	       #:cl-json)		; fixme
   :serial t
   :components
