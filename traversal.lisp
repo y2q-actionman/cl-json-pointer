@@ -82,6 +82,8 @@
     (values nil
 	    nil
 	    (if make-setter?
+		;; I cannot write like `(compose parental-setter (lambda ...))',
+		;; because `parental-setter' may be nil.
 		(lambda (x) (funcall parental-setter (aconsf alist rtoken x)))))))
 
 (defun traverse-plist-by-reference-token (plist rtoken make-setter? parental-setter)
