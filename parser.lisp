@@ -7,16 +7,13 @@
 (deftype parsed-json-pointer ()
   'list)
 
-(defgeneric parse-json-pointer (pointer &key accept-uri-fragment &allow-other-keys)
+(defgeneric parse-json-pointer (obj &key start end accept-uri-fragment)
   (:documentation "Parses `pointer' to an internal representation"))
 
 (defmethod parse-json-pointer (pointer &key &allow-other-keys)
-  (unless (typep pointer 'parsed-json-pointer)
-    (error 'json-pointer-parse-error
-	   :format-control "Unsupported type for parsing"
-	   :format-arguments (list pointer))) 
-  pointer)
-
+  (error 'json-pointer-parse-error
+	 :format-control "Unsupported type for parsing"
+	 :format-arguments (list pointer)))
 
 (eval-when (:load-toplevel :execute) ; assertion for next defmethod
   (assert (subtypep 'parsed-json-pointer 'list)))
@@ -25,10 +22,9 @@
   ;; a short circuit for current `parsed-json-pointer' definition.
   pointer)
 
-
 (defconstant +parse-json-pointer-default-buffer-length+ 16)
 
-(defmethod parse-json-pointer ((stream stream) &key (accept-uri-fragment t))
+(defmethod parse-json-pointer ((stream stream) &key (accept-uri-fragment t) &allow-other-keys)
   ;; checks '#'
   (when accept-uri-fragment
     (let ((char0 (read-char stream nil :eof)))

@@ -14,8 +14,8 @@
 
 (asdf:defsystem #:cl-json-pointer/test
   :licence "MIT"
-  :depends-on (#:cl-json-pointer #:named-readtables)
-  :depends-on (#:cl-json)		; fixme
+  :depends-on (#:cl-json-pointer #:named-readtables
+	       #:cl-json)		; fixme
   :serial t
   :components
   ((:module "test"

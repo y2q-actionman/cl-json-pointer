@@ -5,7 +5,7 @@
 	 (parse-json-pointer pointer)))
     (traverse-by-json-pointer obj parsed-ptr)))
 
-(defun exists-by-json-pointer (obj pointer)
+(defun exists-p-by-json-pointer (obj pointer)
   (let ((parsed-ptr
 	 (parse-json-pointer pointer)))
     (nth-value 1 (traverse-by-json-pointer obj parsed-ptr))))

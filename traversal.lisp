@@ -10,7 +10,7 @@
   `(list* ,@values ,ref))
 
 (define-modify-macro list*-f (&rest values)
-  list*f-internal)
+  list*-f-internal)
 
 (defmacro setf-lambda (access-form)
   "Used for a simple setter."
