@@ -57,4 +57,4 @@
   (test-parse-json-pointer)
   (test-traverse-json)
   (test-traverse-json-2)
-  (test1-1))
+  (test1-run))

@@ -67,14 +67,16 @@
 		       :format-arguments (list obj))))))
 
 
-(defun string=-no-error (string1 string2 &rest string=-args)
-  (ignore-errors
-    (apply #'string= string1 string2 string=-args)))
+(defun compare-string-by-case (a b &optional (case (readtable-case *readtable*)))
+  ;; TODO: should I use `ignore-errors' for alist (or plist) ?
+  (ecase case
+    ((:upcase :downcase) (string-equal a b))
+    ((:preserve :invert) (string= a b))))
 
 
 (defun traverse-alist-by-reference-token (alist rtoken make-setter? parental-setter)
   ;; accepts `nil' as alist.
-  (if-let ((entry (assoc rtoken alist :test #'string=-no-error)))
+  (if-let ((entry (assoc rtoken alist :test #'compare-string-by-case)))
     (values (cdr entry)
 	    entry
 	    (if make-setter?
@@ -90,7 +92,7 @@
   ;; accepts `nil' as plist.
   (loop for plist-head on plist by #'cddr
      as (k v) = plist-head
-     when (string=-no-error k rtoken) ; plist often uses `eq', but we use `string='.
+     when (compare-string-by-case k rtoken) ; plist often uses `eq', but we use `string='.
      return (values v
 		    plist-head
 		    (if make-setter?
@@ -204,11 +206,6 @@
 			    :format-control "Set to nil by index is not supported"))))))))
     (values nil nil setter)))
 
-(defun compare-string-by-case (a b &optional (case (readtable-case *readtable*)))
-  (ecase case
-    ((:upcase :downcase) (string-equal a b))
-    ((:preserve :invert) (string= a b))))
-
 (defmethod traverse-by-reference-token ((obj standard-object) rtoken make-setter? parental-setter)
   (declare (ignore parental-setter))
   ;; cl-json:fluid-object can be treated here.
@@ -302,14 +299,13 @@
   "Traverses an object with a parsed json-pointer, and returns three
 values: a referred object, existence (boolean), and a closure can be
 used as a setter."
-  (loop with last-setter = nil
-     for (rtoken . next) on parsed-pointer
-     as make-setter? = (or (not next)	; at last
-			   (eq (car next) +last-nonexistent-element+)) ; next is '-'
-     do (multiple-value-bind (value exists? setter)
-	    (traverse-by-reference-token obj rtoken make-setter? last-setter)
-	  (when (null next)
-	    (return
-	      (values value exists? setter)))
-	  (setf obj value
-		last-setter setter))))
+  (let ((value obj)
+	(exists? t)
+	(setter nil))			; FIXME: how to set top-level?
+    (loop for (rtoken . next) on parsed-pointer
+       as make-setter? = (or (not next)	; at last
+			     (eq (car next) +last-nonexistent-element+)) ; next is '-'
+       do (setf (values value exists? setter)
+		(traverse-by-reference-token value rtoken make-setter? setter))
+       while next)
+    (values value exists? setter)))

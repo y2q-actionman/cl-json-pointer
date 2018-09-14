@@ -10,7 +10,8 @@
 	       (:file "condition")
                (:file "parser")
                (:file "traversal")
-	       (:file "interface")))
+	       (:file "interface"))
+  :in-order-to ((asdf:test-op (asdf:test-op #:cl-json-pointer/test))))
 
 (asdf:defsystem #:cl-json-pointer/synonyms
   :licence "MIT"
@@ -35,5 +36,5 @@
 	     (:file "reader")
 	     (:file "cl-json")
 	     (:file "test1")
-	     (:file "test")))))
-
+	     (:file "test"))))
+  :perform (asdf:test-op (o s) (uiop:symbol-call '#:cl-json-pointer/test '#:run)))

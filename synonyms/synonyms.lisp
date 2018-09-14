@@ -1,5 +1,5 @@
 (cl:defpackage #:cl-json-pointer/synonyms
-  (:nicknames :cljp/s)		      ; I worry about name conflict...
+  (:nicknames :cljsp)		      ; I worry about name conflict...
   (:documentation "Provide synonyms of cl-json-pointer package, for convenience.")
   (:use :cl #:cl-json-pointer)
   (:shadow #:set #:get)
