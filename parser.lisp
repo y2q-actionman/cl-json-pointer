@@ -10,13 +10,21 @@
 (defgeneric parse-json-pointer (pointer &key accept-uri-fragment &allow-other-keys)
   (:documentation "Parses `pointer' to an internal representation"))
 
+(defmethod parse-json-pointer (pointer &key &allow-other-keys)
+  (unless (typep pointer 'parsed-json-pointer)
+    (error 'json-pointer-syntax-error
+	   :format-control "Unsupported type for parsing"
+	   :format-arguments (list pointer))) 
+  pointer)
+
+
+(eval-when (:load-toplevel :execute) ; assertion for next defmethod
+  (assert (subtypep 'parsed-json-pointer 'list)))
+
 (defmethod parse-json-pointer ((pointer list) &key &allow-other-keys)
-  (check-type pointer parsed-json-pointer)
-  (values pointer
-	  ;; TODO: use a symbol for +last-nonexistent-element+ ?
-	  (loop for rtoken in pointer
-	     when (string= rtoken +last-nonexistent-element+)
-	     count it)))
+  ;; a short circuit for current `parsed-json-pointer' definition.
+  pointer)
+
 
 (defconstant +parse-json-pointer-default-buffer-length+ 16)
 
@@ -42,15 +50,14 @@
   ;; main loop
   (let ((buf (make-array +parse-json-pointer-default-buffer-length+
 			 :element-type 'character :adjustable t :fill-pointer 0))
-	(tokens nil)
-	(lne-count 0))
+	(tokens nil))
     (declare (type string buf)
-	     (dynamic-extent buf)
-	     (type integer lne-count))
+	     (dynamic-extent buf))
     (flet ((push-reference-token ()
-	     (when (string= buf +last-nonexistent-element+)
-	       (incf lne-count))
-	     (push (copy-seq buf) tokens)
+	     (push (if (string= buf +last-nonexistent-element+)
+		       +last-nonexistent-element+
+		       (copy-seq buf))
+		   tokens)
 	     (setf (fill-pointer buf) 0)))
       (loop with parsing-escape-token? of-type boolean = nil
 	 for c of-type (or character symbol) = (read-char stream nil :eof)
@@ -70,7 +77,7 @@
 	      (#\/ (push-reference-token))
 	      (#\~ (setf parsing-escape-token? t))
 	      (otherwise (vector-push-extend c buf)))))
-    (values (nreverse tokens) lne-count)))
+    (nreverse tokens)))
 
 (defmethod parse-json-pointer ((pointer string) &key (start 0) (end (length pointer))
 						  (accept-uri-fragment t) &allow-other-keys)
