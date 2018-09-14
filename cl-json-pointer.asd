@@ -36,5 +36,6 @@
 	     (:file "reader")
 	     (:file "cl-json")
 	     (:file "test1")
+	     (:file "test2")
 	     (:file "test"))))
   :perform (asdf:test-op (o s) (uiop:symbol-call '#:cl-json-pointer/test '#:run)))

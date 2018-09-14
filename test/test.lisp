@@ -54,7 +54,9 @@
 
 
 (defun run ()
-  (test-parse-json-pointer)
-  (test-traverse-json)
-  (test-traverse-json-2)
-  (test1-run))
+  (and
+   (test-parse-json-pointer)
+   (test-traverse-json)
+   (test-traverse-json-2)
+   (test1-run)
+   (test2-run)))
