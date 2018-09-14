@@ -6,11 +6,15 @@
   ;; asdf3 says `:weakly-depends-on' is deprecated..
   ;; :weakly-depends-on (#:cl-json)
   :serial t
-  :components ((:file "package")
-	       (:file "condition")
-               (:file "parser")
-               (:file "traversal")
-	       (:file "interface"))
+  :components
+  ((:module "src"
+	    :serial t
+	    :components
+	    ((:file "package")
+	     (:file "condition")
+	     (:file "parser")
+	     (:file "traversal")
+	     (:file "interface"))))
   :in-order-to ((asdf:test-op (asdf:test-op #:cl-json-pointer/test))))
 
 (asdf:defsystem #:cl-json-pointer/synonyms
