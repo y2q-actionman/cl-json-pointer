@@ -12,7 +12,7 @@
 
 (defmethod parse-json-pointer (pointer &key &allow-other-keys)
   (unless (typep pointer 'parsed-json-pointer)
-    (error 'json-pointer-syntax-error
+    (error 'json-pointer-parse-error
 	   :format-control "Unsupported type for parsing"
 	   :format-arguments (list pointer))) 
   pointer)
@@ -44,7 +44,7 @@
       (#\/
        (progn))				; ok
       (otherwise
-       (error 'json-pointer-syntax-error
+       (error 'json-pointer-parse-error
 	      :format-control "Not started by '/', appeared '~A'"
 	      :format-arguments (list char0)))))
   ;; main loop
@@ -66,7 +66,7 @@
 	      (#\0 (vector-push-extend #\~ buf))
 	      (#\1 (vector-push-extend #\/ buf))
 	      (otherwise
-	       (error 'json-pointer-syntax-error
+	       (error 'json-pointer-parse-error
 		      :format-control "bad char as escape: ~A"
 		      :format-arguments (list c))))
 	   (setf parsing-escape-token? nil)

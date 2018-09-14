@@ -2,9 +2,7 @@
 
 (defpackage :cl-json-pointer
   (:use :cl)
-  (:import-from #:alexandria
-		#:if-let
-		#:when-let)
+  (:use #:alexandria)
   (:import-from #:closer-mop
 		#:class-slots
 		#:slot-definition-name

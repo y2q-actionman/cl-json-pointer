@@ -1,14 +1,36 @@
 (in-package :cl-json-pointer)
 
-(defmacro setf-lambda (access-form &key (key 'identity))
+(defmacro aconsf-internal (ref key value)
+  `(acons ,key ,value ,ref))
+
+(define-modify-macro aconsf (key value)
+  aconsf-internal)
+
+(defmacro list*-f-internal (ref &rest values)
+  `(list* ,@values ,ref))
+
+(define-modify-macro list*-f (&rest values)
+  list*f-internal)
+
+(defmacro setf-lambda (access-form)
   "Used for a simple setter."
-  `(lambda (x) (setf ,access-form (,key x))))
+  (with-gensyms (x)
+    `(lambda (,x) (setf ,access-form ,x))))
+
+(defmacro thunk-lambda (&body form)
+  "Used for delayung errors."
+  (with-gensyms (_)
+    `(lambda (&rest ,_)
+       (declare (ignore ,_))
+       ,@form)))
+
 
 (defun read-reference-token-as-index (reference-token)
   (cond ((eq reference-token +last-nonexistent-element+)
 	 +last-nonexistent-element+)
 	((and (> (length reference-token) 1)
 	      (char= (char reference-token 0) #\0))
+	 ;; FIXME: we must distinguish this from below.
 	 (error 'json-pointer-not-found-error
 		:format-control "reference token (~A) should not start with 0 as index"
 		:format-arguments (list reference-token)))
@@ -22,7 +44,9 @@
 ;;; TODO: merges `make-setter?' and `parental-setter'
 
 (defgeneric traverse-by-reference-token (obj rtoken make-setter? parental-setter)
-  (:documentation "Traverses an object with a reference token, and returns three values: a referred object, existence (boolean), and a closure can be used as a setter."))
+  (:documentation "Traverses an object with a reference token, and
+  returns three values: a referred object, existence (boolean), and a
+  closure can be used as a setter."))
 
 (defmethod traverse-by-reference-token (obj rtoken make-setter? parental-setter)
   ;; bottom case 1 -- refers an unsupported type object.
@@ -37,8 +61,10 @@
   (values obj
 	  obj
 	  (if make-setter?
-	      (error 'json-pointer-access-error
-		     :format-control "setting with an empty reference token is not supported"))))
+	      (thunk-lambda
+		(error 'json-pointer-access-error
+		       :format-control "setting with an empty reference token is not supported (object is ~A)"
+		       :format-arguments (list obj))))))
 
 
 (defun string=-no-error (string1 string2 &rest string=-args)
@@ -56,9 +82,7 @@
     (values nil
 	    nil
 	    (if make-setter?
-		(lambda (x)
-		  (setf alist (acons rtoken x alist))
-		  (funcall parental-setter alist))))))
+		(lambda (x) (funcall parental-setter (aconsf alist rtoken x)))))))
 
 (defun traverse-plist-by-reference-token (plist rtoken make-setter? parental-setter)
   ;; accepts `nil' as plist.
@@ -73,27 +97,26 @@
        (return (values nil
 		       nil
 		       (if make-setter?
-			   (lambda (x)
-			     (setf plist (list* rtoken x plist))
-			     (funcall parental-setter plist)))))))
+			   (lambda (x) (funcall parental-setter (list*-f plist rtoken x))))))))
 
 (defun traverse-ordinal-list-by-reference-token (list index make-setter? parental-setter)
   (if (eq index +last-nonexistent-element+)
       (values nil
 	      nil
 	      (if make-setter?
-		  (lambda (x)
-		    (if list
-			(nconc list (list x))
-			(funcall parental-setter (setf list (list x)))))))
+		  (lambda (x) (funcall parental-setter (nconcf list (list x))))))
       (if-let ((this-cons (nthcdr index list)))
 	(values (car this-cons)
 		this-cons
 		(if make-setter?
 		    (setf-lambda (car this-cons))))
-	(error 'json-pointer-not-found-error
-	       :format-control "Index ~A is out-of-index from ~A"
-	       :format-arguments (list index list)))))
+	(values nil
+		nil
+		(if make-setter?
+		    (thunk-lambda
+		      (error 'json-pointer-not-found-error
+			     :format-control "Index ~A is out-of-index from ~A"
+			     :format-arguments (list index list))))))))
 
 
 (defun alist-like-p (list)
@@ -129,10 +152,10 @@
 
 (defparameter *traverse-nil-set-to-last-method* :list
   "Determines how to set to the last (by '-') of NIL.
-- :list :: pushes <value> as an ordinal.
+- :list :: pushes <value> as an ordinal list.
 - :alist :: pushes (reference-token . <value>) as an alist.
 - :plist :: appends (reference-token <value>) as an plist.
-- :array :: makes new array contains <value>.
+- :array :: makes a new array contains <value>.
 ")
 
 (defparameter *traverse-nil-set-to-index-method* :error
@@ -171,10 +194,10 @@
 		  (:plist
 		   (pick-setter #'traverse-plist-by-reference-token))
 		  (:array
-		   (make-array-tail-adder #() parental-setter))
+		   (make-array-tail-adder #() parental-setter
+					  :set-to-last-method :create))
 		  (:error
-		   (lambda (x)
-		     (declare (ignore x))
+		   (thunk-lambda
 		     (error 'json-pointer-access-error
 			    :format-control "Set to nil by index is not supported"))))))))
     (values nil nil setter)))
@@ -203,8 +226,7 @@
 	 (values nil
 		 nil
 		 (if make-setter?
-		     (lambda (x)
-		       (declare (ignore x))
+		     (thunk-lambda
 		       (error 'json-pointer-access-error
 			      :format-control "object ~A does not have '~A' slot"
 			      :format-arguments (list obj rtoken)))))))
@@ -221,7 +243,14 @@
 	    (if make-setter?
 		(setf-lambda (gethash rtoken obj))))))
 
-(defun make-array-tail-adder (array parental-setter)
+(defparameter *traverse-non-adjustable-array-set-to-last-method* :create
+  "Determines how to set to the last (by '-') of non-adjutable arrays.
+- :error :: throws an error.
+- :create :: makes a new adjustable array contains <value>.
+")
+
+(defun make-array-tail-adder (array parental-setter
+			      &key (set-to-last-method *traverse-non-adjustable-array-set-to-last-method*))
   (lambda (x)
     (check-type array (array * (*)))
     (let ((adjustable? (adjustable-array-p array))
@@ -232,14 +261,19 @@
 	    ((and has-fill-pointer?
 		  (vector-push x array))) ; uses `vector-push' result as condition.
 	    (t
-	     (let* ((original-length (length array))
-		    (new-array (make-array (* 2 original-length)
-					   :adjustable t
-					   :fill-pointer original-length)))
-	       (replace new-array array)
-	       (setf array new-array))
-	     (funcall parental-setter array) ; FIXME: add a type check??
-	     (vector-push x array))))))
+	     (ecase set-to-last-method
+	       (:error
+		(error 'json-pointer-access-error
+		       :format-control "tried to add to the tail of non-adjutable non-fill-pointer array"))
+	       (:create
+		(let* ((original-length (length array))
+		       (new-array (make-array (1+ original-length)
+					      :adjustable t
+					      :fill-pointer original-length)))
+		  (replace new-array array)
+		  (setf array new-array)
+		  (funcall parental-setter array)) ; FIXME: add a type check of function?
+		(vector-push x array))))))))
 
 (defmethod traverse-by-reference-token ((obj array) rtoken make-setter? parental-setter)
   (let ((index (read-reference-token-as-index rtoken)))
@@ -249,9 +283,13 @@
 		   (if make-setter?
 		       (make-array-tail-adder obj parental-setter))))
 	  ((not (array-in-bounds-p obj index))
-	   (error 'json-pointer-not-found-error
-		  :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
-		  :format-arguments (list index rtoken obj)))
+	   (values nil
+		   nil
+		   (if make-setter?
+		       (thunk-lambda
+			 (error 'json-pointer-not-found-error
+				:format-control "Index ~A (pointer ~A) is out-of-index from ~A"
+				:format-arguments (list index rtoken obj))))))
 	  (t
 	   (values (aref obj index)
 		   index
