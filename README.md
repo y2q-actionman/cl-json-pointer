@@ -4,7 +4,7 @@ JSON Pointer, defined in [RFC6901](https://tools.ietf.org/html/rfc6901), process
 
 Aiming to:
 * Independent from any JSON libraries (as much as possible).
-* Usable for some Lisp objects directly -- on lists, arraies, CLOS objects, hash-tables, etc.
+* Usable for built-in Lisp objects -- lists, arrays, CLOS objects, hash-tables, etc.
 
 # License
 
@@ -77,6 +77,7 @@ For running tests, do below additionally.
 
 (TODO: add 'set' examples)
 
+(TODO: add Lisp object examples)
 
 # API
 
