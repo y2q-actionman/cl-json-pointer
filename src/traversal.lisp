@@ -56,6 +56,8 @@
 		       :format-control "obj ~S is not an array or an object (pointer is ~A)"
 		       :format-arguments (list obj rtoken))))))
 
+;; TODO: if rtoken == null , return `obj' as-is!
+#+ignore
 (defmethod traverse-by-reference-token (obj (rtoken null) parental-setter)
   ;; bottom case 2 -- refers an object with an empty token.
   (values obj obj
@@ -87,6 +89,14 @@
     ((:preserve :invert) (string= a b))))
 
 
+(defmacro add-to-tail* (list-var nil-handler &rest new-entries)
+  `(let* ((null? (null ,list-var))
+	  (obj-to-conc (list ,@new-entries))
+	  (new-list (nconcf ,list-var obj-to-conc)))
+     (when null?
+       (funcall ,nil-handler new-list))
+     new-list))
+
 (defun traverse-alist-by-reference-token (alist rtoken parental-setter)
   ;; accepts `nil' as alist.
   (if-let ((entry (assoc rtoken alist :test #'compare-string-by-case)))
@@ -95,8 +105,8 @@
 		(setf-lambda (cdr entry))))
     (values nil nil
 	    (if parental-setter
-		(compose parental-setter
-			 (lambda (x) (aconsf alist rtoken x)))))))
+		(lambda (x)
+		  (add-to-tail* alist parental-setter (cons rtoken x)))))))
 
 (defun traverse-plist-by-reference-token (plist rtoken parental-setter)
   ;; accepts `nil' as plist.
@@ -109,18 +119,18 @@
      finally
        (return (values nil nil
 		       (if parental-setter
-			   (compose parental-setter
-				    (lambda (x) (list*-f plist rtoken x))))))))
+			   (lambda (x)
+			     (add-to-tail* plist parental-setter rtoken x)))))))
 
 (defun traverse-ordinal-list-by-reference-token (list rtoken parental-setter)
   (let ((index (read-reference-token-as-index rtoken)))
     (if (eq index +last-nonexistent-element+)
 	(values nil nil
 		(if parental-setter
-		    (compose parental-setter
-			     (lambda (x) (nconcf list (list x))))))
+		    (lambda (x)
+		      (add-to-tail* list parental-setter x))))
 	(if-let ((this-cons (nthcdr index list)))
-	  (values (car this-cons)	this-cons
+	  (values (car this-cons) this-cons
 		  (if parental-setter
 		      (setf-lambda (car this-cons))))
 	  (values nil nil
@@ -304,10 +314,7 @@ used as a setter."
 	(exists? t)
 	(setter
 	 (if make-setter?
-	     (thunk-lambda
-	       (error 'json-pointer-access-error
-		      :format-control "Setting to root object (~A) is not supported"
-		      :format-arguments (list obj))))))
+	     (setf-lambda obj))))
     (loop for (rtoken . next) on parsed-pointer
        do (setf (values value exists? setter)
 		(traverse-by-reference-token value rtoken setter))

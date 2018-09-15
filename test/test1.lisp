@@ -69,31 +69,35 @@
   (cljsp:set obj "/d/e/2/c" 6)
   (assert (equal (cljsp:get obj "/d/e/2/c") 6))
 
-  ;; ;; set nested properties
-  ;; (cljsp:set obj "/f/g/h/i" 6)
-  ;; (assert (equal (cljsp:get obj "/f/g/h/i")  6))
+  ;; set nested properties
+  (cljsp:set obj "/f/g/h/i" 6)
+  (assert (equal (cljsp:get obj "/f/g/h/i")  6))
 
-  ;; ;; set an array
-  ;; (cljsp:set obj "/f/g/h/foo/-" "test")
-  ;; (let ((arr (cljsp:get obj  "/f/g/h/foo")))
-  ;;   (assert (typep arr 'array))
-  ;;   (assert (equal (aref arr 0) "test")))
+  ;; set an array
+  (cljsp:set obj "/f/g/h/foo/-" "test")
+  (let ((arr (cljsp:get obj  "/f/g/h/foo")))
+    ;; TODO: add a way to specify type.
+    ;; (assert (typep arr 'array))
+    (assert (equal (elt arr 0) "test")))
 
   ;; can set `null` as a value
-  ;; (cljsp:set obj "/f/g/h/foo/0" nil)
-  ;; (assert (null (cljsp:get obj "/f/g/h/foo/0")))
+  (cljsp:set obj "/f/g/h/foo/0" nil)
+  (assert (null (cljsp:get obj "/f/g/h/foo/0")))
+  ;; FIXME: original was below, this causes error on my impl..
   ;; (cljsp:set obj "/b/c/" nil)
-  ;; (assert (null (cljsp:get obj "/b/c")))
+  (cljsp:set obj "/b/c" nil)
+  (assert (null (cljsp:get obj "/b/c")))
 
   (assert (equalp (cljsp:get obj "") obj))
   (assert-condition (cljsp:get obj "a"))
   (assert-condition (cljsp:get obj "a/"))
 
-  ;; can unset values with `undefined`
-  ;; (cljsp:set obj "/a" undefined)
-  ;; (assert (not (cljsp:exists-p obj  "/a")))
-  ;; (cljsp:set obj "/d/e/1" undefined)
-  ;; (assert (not (cljsp:exists-p obj "/d/e/1")))
+  ;; TODO: I must add `delete' operation.
+  ;; ;; can unset values with `undefined`
+  ;; ;; (cljsp:set obj "/a" undefined)
+  ;; ;; (assert (not (cljsp:exists-p obj  "/a")))
+  ;; ;; (cljsp:set obj "/d/e/1" undefined)
+  ;; ;; (assert (not (cljsp:exists-p obj "/d/e/1")))
 
   ;; returns `undefined` when path extends beyond any existing objects
   (assert (not (cljsp:exists-p obj "/x/y/z")))
