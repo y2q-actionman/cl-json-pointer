@@ -83,8 +83,6 @@
   ;; can set `null` as a value
   (cljsp:set obj "/f/g/h/foo/0" nil)
   (assert (null (cljsp:get obj "/f/g/h/foo/0")))
-  ;; FIXME: original was below, this causes error on my impl..
-  ;; (cljsp:set obj "/b/c/" nil)
   (cljsp:set obj "/b/c" nil)
   (assert (null (cljsp:get obj "/b/c")))
 
