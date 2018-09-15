@@ -41,7 +41,6 @@
 		    :format-control "reference token (~A) cannot be read as index"
 		    :format-arguments (list reference-token)))))))
 
-;;; TODO: merges `make-setter?' and `parental-setter'
 
 (defgeneric traverse-by-reference-token (obj rtoken parental-setter)
   (:documentation "Traverses an object with a reference token, and
@@ -50,10 +49,12 @@
 
 (defmethod traverse-by-reference-token (obj rtoken parental-setter)
   ;; bottom case 1 -- refers an unsupported type object.
-  (declare (ignore parental-setter))
-  (error 'json-pointer-not-found-error
-	 :format-control "obj ~A is not an array or an object (pointer is ~A)"
-	 :format-arguments (list obj rtoken)))
+  (values obj obj
+	  (if parental-setter
+	      (thunk-lambda
+		(error 'json-pointer-not-found-error
+		       :format-control "obj ~S is not an array or an object (pointer is ~A)"
+		       :format-arguments (list obj rtoken))))))
 
 (defmethod traverse-by-reference-token (obj (rtoken null) parental-setter)
   ;; bottom case 2 -- refers an object with an empty token.
@@ -63,6 +64,20 @@
 		(error 'json-pointer-access-error
 		       :format-control "setting with an empty reference token is not supported (object is ~A)"
 		       :format-arguments (list obj))))))
+
+
+(defparameter *traverse-treat-string-as-atom* t
+  ;; I don't want to treat string as an array.
+  "If this is T, cl-json-pointer trests string as atom.")
+
+(defmethod traverse-by-reference-token ((obj string) rtoken parental-setter)
+  (if *traverse-treat-string-as-atom*
+      (values nil nil
+	      (if parental-setter
+		  (error 'json-pointer-not-found-error
+			 :format-control "string ~S is not to be set (pointer is ~A)"
+			 :format-arguments (list obj rtoken))))
+      (call-next-method)))
 
 
 (defun compare-string-by-case (a b &optional (case (readtable-case *readtable*)))

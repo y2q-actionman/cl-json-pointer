@@ -29,8 +29,8 @@
 (defun test2-undefined (&aux (obj (read-json-string +test2-undefined+)))
   (assert (not (exists-p-by-json-pointer obj "/oof")))
   (assert (not (exists-p-by-json-pointer obj "/baz/4")))
-  ;; (assert (not (exists-p-by-json-pointer obj "/foo/bar")))
-  ;; (assert (not (exists-p-by-json-pointer obj "/foo/bar/baz")))
+  (assert (not (exists-p-by-json-pointer obj "/foo/bar")))
+  (assert (not (exists-p-by-json-pointer obj "/foo/bar/baz")))
   t)
 
 
