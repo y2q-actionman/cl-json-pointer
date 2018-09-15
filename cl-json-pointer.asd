@@ -37,8 +37,9 @@
 	    :serial t
 	    :components
 	    ((:file "package")
-	     (:file "reader")
+	     (:file "util")
 	     (:file "cl-json")
+	     (:file "test0")
 	     (:file "test1")
 	     (:file "test2")
 	     (:file "test"))))

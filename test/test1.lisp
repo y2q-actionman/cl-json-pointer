@@ -4,12 +4,6 @@
 (in-package :cl-json-pointer/test)
 (in-readtable cjp-test-syntax)
 
-(defmacro assert-condition (&body body)
-  (with-gensyms (ret condition)
-    `(multiple-value-bind (,ret ,condition)
-	 (ignore-errors (progn ,@body))
-       (assert (and (null ,ret) ,condition)))))
-
 ;;; Test cases in top page.
 
 (define-constant +test1-top-page+
@@ -163,7 +157,7 @@
   :test 'equal)
 
 (defun test1-example (&aux (example (read-json-string +test1-example+)))
-  ;; (assert (equal (cljsp:get example "") example))
+  (assert (equal (cljsp:get example "") example))
 
   (let ((ans (cljsp:get example "/foo")))
     (assert (equal (length ans) 2))
