@@ -43,24 +43,22 @@
 
 ;;; TODO: merges `make-setter?' and `parental-setter'
 
-(defgeneric traverse-by-reference-token (obj rtoken make-setter? parental-setter)
+(defgeneric traverse-by-reference-token (obj rtoken parental-setter)
   (:documentation "Traverses an object with a reference token, and
   returns three values: a referred object, existence (boolean), and a
   closure can be used as a setter."))
 
-(defmethod traverse-by-reference-token (obj rtoken make-setter? parental-setter)
+(defmethod traverse-by-reference-token (obj rtoken parental-setter)
   ;; bottom case 1 -- refers an unsupported type object.
-  (declare (ignore make-setter? parental-setter))
+  (declare (ignore parental-setter))
   (error 'json-pointer-not-found-error
 	 :format-control "obj ~A is not an array or an object (pointer is ~A)"
 	 :format-arguments (list obj rtoken)))
 
-(defmethod traverse-by-reference-token (obj (rtoken null) make-setter? parental-setter)
+(defmethod traverse-by-reference-token (obj (rtoken null) parental-setter)
   ;; bottom case 2 -- refers an object with an empty token.
-  (declare (ignore parental-setter))
-  (values obj
-	  obj
-	  (if make-setter?
+  (values obj obj
+	  (if parental-setter
 	      (thunk-lambda
 		(error 'json-pointer-access-error
 		       :format-control "setting with an empty reference token is not supported (object is ~A)"
@@ -74,53 +72,48 @@
     ((:preserve :invert) (string= a b))))
 
 
-(defun traverse-alist-by-reference-token (alist rtoken make-setter? parental-setter)
+(defun traverse-alist-by-reference-token (alist rtoken parental-setter)
   ;; accepts `nil' as alist.
   (if-let ((entry (assoc rtoken alist :test #'compare-string-by-case)))
-    (values (cdr entry)
-	    entry
-	    (if make-setter?
+    (values (cdr entry) entry
+	    (if parental-setter
 		(setf-lambda (cdr entry))))
-    (values nil
-	    nil
-	    (if make-setter?
-		;; I cannot write like `(compose parental-setter (lambda ...))',
-		;; because `parental-setter' may be nil.
-		(lambda (x) (funcall parental-setter (aconsf alist rtoken x)))))))
+    (values nil nil
+	    (if parental-setter
+		(compose parental-setter
+			 (lambda (x) (aconsf alist rtoken x)))))))
 
-(defun traverse-plist-by-reference-token (plist rtoken make-setter? parental-setter)
+(defun traverse-plist-by-reference-token (plist rtoken parental-setter)
   ;; accepts `nil' as plist.
   (loop for plist-head on plist by #'cddr
      as (k v) = plist-head
      when (compare-string-by-case k rtoken) ; plist often uses `eq', but we use `string='.
-     return (values v
-		    plist-head
-		    (if make-setter?
+     return (values v plist-head
+		    (if parental-setter
 			(setf-lambda (cadr plist-head))))
      finally
-       (return (values nil
-		       nil
-		       (if make-setter?
-			   (lambda (x) (funcall parental-setter (list*-f plist rtoken x))))))))
+       (return (values nil nil
+		       (if parental-setter
+			   (compose parental-setter
+				    (lambda (x) (list*-f plist rtoken x))))))))
 
-(defun traverse-ordinal-list-by-reference-token (list index make-setter? parental-setter)
-  (if (eq index +last-nonexistent-element+)
-      (values nil
-	      nil
-	      (if make-setter?
-		  (lambda (x) (funcall parental-setter (nconcf list (list x))))))
-      (if-let ((this-cons (nthcdr index list)))
-	(values (car this-cons)
-		this-cons
-		(if make-setter?
-		    (setf-lambda (car this-cons))))
-	(values nil
-		nil
-		(if make-setter?
-		    (thunk-lambda
-		      (error 'json-pointer-not-found-error
-			     :format-control "Index ~A is out-of-index from ~A"
-			     :format-arguments (list index list))))))))
+(defun traverse-ordinal-list-by-reference-token (list rtoken parental-setter)
+  (let ((index (read-reference-token-as-index rtoken)))
+    (if (eq index +last-nonexistent-element+)
+	(values nil nil
+		(if parental-setter
+		    (compose parental-setter
+			     (lambda (x) (nconcf list (list x))))))
+	(if-let ((this-cons (nthcdr index list)))
+	  (values (car this-cons)	this-cons
+		  (if parental-setter
+		      (setf-lambda (car this-cons))))
+	  (values nil nil
+		  (if parental-setter
+		      (thunk-lambda
+			(error 'json-pointer-not-found-error
+			       :format-control "Index ~A is out-of-index from ~A"
+			       :format-arguments (list index list)))))))))
 
 
 (defun alist-like-p (list)
@@ -137,22 +130,22 @@
   ;; I think I should not assume the keys are always a symbol.
   "If this is T, cl-json-pointer considers plists at traversaling.")
 
-(defmethod traverse-by-reference-token ((obj list) rtoken make-setter? parental-setter)
-  (if-let ((index (ignore-errors
-		    (read-reference-token-as-index rtoken))))
+(defmethod traverse-by-reference-token ((obj list) rtoken parental-setter)
+  (if (ignore-errors
+	(read-reference-token-as-index rtoken))
     ;; rtoken is ambiguous with index.
     (cond ((alist-like-p obj)
-	   (traverse-alist-by-reference-token obj rtoken make-setter? parental-setter))
+	   (traverse-alist-by-reference-token obj rtoken parental-setter))
 	  ((and *traverse-consider-plist*
 		(plist-like-p obj))
-	   (traverse-plist-by-reference-token obj rtoken make-setter? parental-setter))
+	   (traverse-plist-by-reference-token obj rtoken parental-setter))
 	  (t
-	   (traverse-ordinal-list-by-reference-token obj index make-setter? parental-setter)))
+	   (traverse-ordinal-list-by-reference-token obj rtoken parental-setter)))
     ;; I assume `rtoken' is not index, so considers alist (or plist).
     (if (and *traverse-consider-plist*
 	     (plist-like-p obj))
-	(traverse-plist-by-reference-token obj rtoken make-setter? parental-setter)
-	(traverse-alist-by-reference-token obj rtoken make-setter? parental-setter))))
+	(traverse-plist-by-reference-token obj rtoken parental-setter)
+	(traverse-alist-by-reference-token obj rtoken parental-setter))))
 
 (defparameter *traverse-nil-set-to-last-method* :list
   "Determines how to set to the last (by '-') of NIL.
@@ -175,7 +168,7 @@
 - :plist :: appends (reference-token <value>) as an plist.
 ")
 
-(defmethod traverse-by-reference-token ((obj null) rtoken make-setter? parental-setter)
+(defmethod traverse-by-reference-token ((obj null) rtoken parental-setter)
   ;; empty. this is problematic for setting.
   (let* ((index (ignore-errors
 		  (read-reference-token-as-index rtoken)))
@@ -187,9 +180,9 @@
 		(t
 		 *traverse-nil-set-to-name-method*)))
 	 (setter
-	  (if make-setter?
+	  (if parental-setter
 	      (flet ((pick-setter (func)
-		       (nth-value 2 (funcall func obj rtoken make-setter? parental-setter))))
+		       (nth-value 2 (funcall func obj rtoken parental-setter))))
 		(ecase setter-method
 		  (:list
 		   (pick-setter #'traverse-ordinal-list-by-reference-token))
@@ -206,40 +199,35 @@
 			    :format-control "Set to nil by index is not supported"))))))))
     (values nil nil setter)))
 
-(defmethod traverse-by-reference-token ((obj standard-object) rtoken make-setter? parental-setter)
-  (declare (ignore parental-setter))
+(defmethod traverse-by-reference-token ((obj standard-object) rtoken parental-setter)
   ;; cl-json:fluid-object can be treated here.
-  (loop with class = (class-of obj)
-     for slot in (class-slots class)
-     as slot-name = (slot-definition-name slot)
-     when (compare-string-by-case rtoken slot-name)
-     return
-       (let ((bound? (slot-boundp-using-class class obj slot)))
-	 (values (if bound?
-		     (slot-value-using-class class obj slot))
-		 bound?
-		 (if make-setter?
-		     (setf-lambda (slot-value-using-class class obj slot)))))
-     finally
-       (return
-	 (values nil
-		 nil
-		 (if make-setter?
-		     (thunk-lambda
-		       (error 'json-pointer-access-error
-			      :format-control "object ~A does not have '~A' slot"
-			      :format-arguments (list obj rtoken)))))))
-  ;; TODO: support structure-object?
-  ;; TODO: support condition-object?
-  )
+  (let* ((class (class-of obj))
+	 (slot (find rtoken (class-slots class)
+		     :key #'slot-definition-name
+		     :test #'compare-string-by-case)))
+    (if slot
+	(let ((bound? (slot-boundp-using-class class obj slot)))
+	  (values (if bound?
+		      (slot-value-using-class class obj slot))
+		  bound?
+		  (if parental-setter
+		      (setf-lambda (slot-value-using-class class obj slot)))))
+	(values nil nil
+		(if parental-setter
+		    (thunk-lambda
+		      (error 'json-pointer-access-error
+			     :format-control "object ~A does not have '~A' slot"
+			     :format-arguments (list obj rtoken))))))
+    ;; TODO: support structure-object?
+    ;; TODO: support condition-object?
+    ))
 
-(defmethod traverse-by-reference-token ((obj hash-table) rtoken make-setter? parental-setter)
-  (declare (ignore parental-setter))
+(defmethod traverse-by-reference-token ((obj hash-table) rtoken parental-setter)
   (multiple-value-bind (value exists?)
       (gethash rtoken obj)
     (values value
 	    exists?
-	    (if make-setter?
+	    (if parental-setter
 		(setf-lambda (gethash rtoken obj))))))
 
 (defparameter *traverse-non-adjustable-array-set-to-last-method* :create
@@ -265,47 +253,48 @@
 		(error 'json-pointer-access-error
 		       :format-control "tried to add to the tail of non-adjutable non-fill-pointer array"))
 	       (:create
+		(ensure-function parental-setter)
 		(let* ((original-length (length array))
 		       (new-array (make-array (1+ original-length)
 					      :adjustable t
 					      :fill-pointer original-length)))
 		  (replace new-array array)
 		  (setf array new-array)
-		  (funcall parental-setter array)) ; FIXME: add a type check of function?
+		  (funcall parental-setter array))
 		(vector-push x array))))))))
 
-(defmethod traverse-by-reference-token ((obj array) rtoken make-setter? parental-setter)
+(defmethod traverse-by-reference-token ((obj array) rtoken parental-setter)
   (let ((index (read-reference-token-as-index rtoken)))
     (cond ((eq index +last-nonexistent-element+)
-	   (values nil
-		   nil
-		   (if make-setter?
+	   (values nil nil
+		   (if parental-setter
 		       (make-array-tail-adder obj parental-setter))))
 	  ((not (array-in-bounds-p obj index))
-	   (values nil
-		   nil
-		   (if make-setter?
+	   (values nil nil
+		   (if parental-setter
 		       (thunk-lambda
 			 (error 'json-pointer-not-found-error
 				:format-control "Index ~A (pointer ~A) is out-of-index from ~A"
 				:format-arguments (list index rtoken obj))))))
 	  (t
-	   (values (aref obj index)
-		   index
-		   (if make-setter?
+	   (values (aref obj index) index
+		   (if parental-setter
 		       (setf-lambda (aref obj index))))))))
 
-(defun traverse-by-json-pointer (obj parsed-pointer)
+(defun traverse-by-json-pointer (obj parsed-pointer make-setter?)
   "Traverses an object with a parsed json-pointer, and returns three
 values: a referred object, existence (boolean), and a closure can be
 used as a setter."
   (let ((value obj)
 	(exists? t)
-	(setter nil))			; FIXME: how to set top-level?
+	(setter
+	 (if make-setter?
+	     (thunk-lambda
+	       (error 'json-pointer-access-error
+		      :format-control "Setting to root object (~A) is not supported"
+		      :format-arguments (list obj))))))
     (loop for (rtoken . next) on parsed-pointer
-       as make-setter? = (or (not next)	; at last
-			     (eq (car next) +last-nonexistent-element+)) ; next is '-'
        do (setf (values value exists? setter)
-		(traverse-by-reference-token value rtoken make-setter? setter))
+		(traverse-by-reference-token value rtoken setter))
        while next)
     (values value exists? setter)))

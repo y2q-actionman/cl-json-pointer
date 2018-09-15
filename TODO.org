@@ -16,3 +16,6 @@ TODO: json query
 - set -> 経路がなければ error なげる。さらに、set時にerrorする可能性がある。
 
 https://github.com/manuelstofer/json-pointer
+
+
+alist の key に数値があったらどうするのか問題
