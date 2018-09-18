@@ -1,4 +1,18 @@
-(in-package :cl-json-pointer/test)
+(in-package :cl-user)
+
+(defmacro aconsf-internal (ref key value)
+  `(acons ,key ,value ,ref))
+
+(define-modify-macro aconsf (key value)
+  aconsf-internal)
+
+(defmacro list*-f-internal (ref &rest values)
+  `(list* ,@values ,ref))
+
+(define-modify-macro list*-f (&rest values)
+  list*-f-internal)
+
+
 
 (defmacro define-this-source-pathname-variable (name)
   `(progn

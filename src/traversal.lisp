@@ -1,17 +1,5 @@
 (in-package :cl-json-pointer)
 
-(defmacro aconsf-internal (ref key value)
-  `(acons ,key ,value ,ref))
-
-(define-modify-macro aconsf (key value)
-  aconsf-internal)
-
-(defmacro list*-f-internal (ref &rest values)
-  `(list* ,@values ,ref))
-
-(define-modify-macro list*-f (&rest values)
-  list*-f-internal)
-
 (defmacro setf-lambda (access-form)
   "Used for a simple setter."
   (with-gensyms (x)
