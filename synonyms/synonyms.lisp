@@ -2,9 +2,9 @@
   (:nicknames :cljsp)		      ; I worry about name conflict...
   (:documentation "Provide synonyms of cl-json-pointer package, for convenience.")
   (:use :cl #:cl-json-pointer)
-  (:shadow #:set #:get)
+  (:shadow #:set #:get #:delete)
   (:export
-   #:parse #:get #:exists-p #:set))
+   #:parse #:get #:exists-p #:set #:delete))
 
 (in-package :cl-json-pointer/synonyms)
 
@@ -21,3 +21,6 @@
 
 (defun set (obj pointer value)
   (set-by-json-pointer obj pointer value))
+
+(defun delete (obj pointer)
+  (delete-by-json-pointer obj pointer))

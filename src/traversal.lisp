@@ -13,36 +13,40 @@
        ,@form)))
 
 
+(defun make-not-to-set-error-thunk (obj rtoken)
+  (thunk-lambda
+    (error 'json-pointer-not-found-error
+	   :format-control "obj ~S is not an array or an object (pointer is ~A)"
+	   :format-arguments (list obj rtoken))))
+
 (defun read-reference-token-as-index (reference-token)
   (cond ((eq reference-token +last-nonexistent-element+)
 	 +last-nonexistent-element+)
 	((and (> (length reference-token) 1)
 	      (char= (char reference-token 0) #\0))
-	 ;; FIXME: we must distinguish this from below.
-	 (error 'json-pointer-not-found-error
+	 (error 'json-pointer-bad-index-error
 		:format-control "reference token (~A) should not start with 0 as index"
 		:format-arguments (list reference-token)))
 	(t
 	 (handler-case (parse-integer reference-token)
 	   (error ()
-	     (error 'json-pointer-not-found-error
+	     (error 'json-pointer-bad-index-error
 		    :format-control "reference token (~A) cannot be read as index"
 		    :format-arguments (list reference-token)))))))
 
 
-(defgeneric traverse-by-reference-token (obj rtoken parental-setter)
+(defgeneric traverse-by-reference-token (obj rtoken parental-setter parental-deleter)
   (:documentation "Traverses an object with a reference token, and
   returns three values: a referred object, existence (boolean), and a
   closure can be used as a setter."))
 
-(defmethod traverse-by-reference-token (obj rtoken parental-setter)
+(defmethod traverse-by-reference-token (obj rtoken parental-setter parental-deleter)
   ;; bottom case 1 -- refers an unsupported type object.
   (values obj obj
 	  (if parental-setter
-	      (thunk-lambda
-		(error 'json-pointer-not-found-error
-		       :format-control "obj ~S is not an array or an object (pointer is ~A)"
-		       :format-arguments (list obj rtoken))))))
+	      (make-not-to-set-error-thunk obj rtoken))
+	  (if parental-deleter
+	      (make-not-to-set-error-thunk obj rtoken))))
 
 ;; TODO: if rtoken == null , return `obj' as-is!
 #+ignore
@@ -60,13 +64,13 @@
   ;; I don't want to treat string as an array.
   "If this is T, cl-json-pointer trests string as atom.")
 
-(defmethod traverse-by-reference-token ((obj string) rtoken parental-setter)
+(defmethod traverse-by-reference-token ((obj string) rtoken parental-setter parental-deleter)
   (if *traverse-treat-string-as-atom*
       (values nil nil
 	      (if parental-setter
-		  (error 'json-pointer-not-found-error
-			 :format-control "string ~S is not to be set (pointer is ~A)"
-			 :format-arguments (list obj rtoken))))
+		  (make-not-to-set-error-thunk obj rtoken))
+	      (if parental-deleter
+		  (make-not-to-set-error-thunk obj rtoken)))
       (call-next-method)))
 
 
@@ -85,48 +89,71 @@
        (funcall ,nil-handler new-list))
      new-list))
 
-(defun traverse-alist-by-reference-token (alist rtoken parental-setter)
+(defun make-bad-deleter-thunk-lambda (obj rtoken)
+  (thunk-lambda
+    (error 'json-pointer-not-found-error
+	   :format-control "object ~S does not have a point to delete, referenced by ~A"
+	   :format-arguments (list obj rtoken))))
+
+(defun traverse-alist-by-reference-token (alist rtoken parental-setter parental-deleter)
   ;; accepts `nil' as alist.
   (if-let ((entry (assoc rtoken alist :test #'compare-string-by-case)))
     (values (cdr entry) entry
 	    (if parental-setter
-		(setf-lambda (cdr entry))))
+		(setf-lambda (cdr entry)))
+	    (if parental-deleter
+		(lambda ()
+		  (funcall parental-deleter (delete entry alist)))))
     (values nil nil
 	    (if parental-setter
 		(lambda (x)
-		  (add-to-tail* alist parental-setter (cons rtoken x)))))))
+		  (add-to-tail* alist parental-setter (cons rtoken x))))
+	    (if parental-deleter
+		(make-bad-deleter-thunk-lambda alist rtoken)))))
 
-(defun traverse-plist-by-reference-token (plist rtoken parental-setter)
+(defun traverse-plist-by-reference-token (plist rtoken parental-setter parental-deleter)
   ;; accepts `nil' as plist.
   (loop for plist-head on plist by #'cddr
      as (k v) = plist-head
      when (compare-string-by-case k rtoken) ; plist often uses `eq', but we use `string='.
      return (values v plist-head
 		    (if parental-setter
-			(setf-lambda (cadr plist-head))))
+			(setf-lambda (cadr plist-head)))
+		    (if parental-deleter
+			(lambda ()
+			  (error "under implementation -- plist remove")))) ; TODO
      finally
        (return (values nil nil
 		       (if parental-setter
 			   (lambda (x)
-			     (add-to-tail* plist parental-setter rtoken x)))))))
+			     (add-to-tail* plist parental-setter rtoken x)))
+		       (if parental-deleter
+			   (make-bad-deleter-thunk-lambda plist rtoken))))))
 
-(defun traverse-ordinal-list-by-reference-token (list rtoken parental-setter)
+(defun traverse-ordinal-list-by-reference-token (list rtoken parental-setter parental-deleter)
   (let ((index (read-reference-token-as-index rtoken)))
     (if (eq index +last-nonexistent-element+)
 	(values nil nil
 		(if parental-setter
 		    (lambda (x)
-		      (add-to-tail* list parental-setter x))))
+		      (add-to-tail* list parental-setter x)))
+		(if parental-deleter
+		    (make-bad-deleter-thunk-lambda list rtoken)))
 	(if-let ((this-cons (nthcdr index list)))
 	  (values (car this-cons) this-cons
 		  (if parental-setter
-		      (setf-lambda (car this-cons))))
+		      (setf-lambda (car this-cons)))
+		  (if parental-deleter
+		      (lambda ()
+			  (error "under implementation -- ordinal list remove"))))
 	  (values nil nil
 		  (if parental-setter
 		      (thunk-lambda
 			(error 'json-pointer-not-found-error
 			       :format-control "Index ~A is out-of-index from ~A"
-			       :format-arguments (list index list)))))))))
+			       :format-arguments (list index list))))
+		  (if parental-deleter
+		      (make-bad-deleter-thunk-lambda list rtoken)))))))
 
 
 (defun alist-like-p (list)
@@ -143,22 +170,22 @@
   ;; I think I should not assume the keys are always a symbol.
   "If this is T, cl-json-pointer considers plists at traversaling.")
 
-(defmethod traverse-by-reference-token ((obj list) rtoken parental-setter)
+(defmethod traverse-by-reference-token ((obj list) rtoken parental-setter parental-deleter)
   (if (ignore-errors
 	(read-reference-token-as-index rtoken))
     ;; rtoken is ambiguous with index.
     (cond ((alist-like-p obj)
-	   (traverse-alist-by-reference-token obj rtoken parental-setter))
+	   (traverse-alist-by-reference-token obj rtoken parental-setter parental-deleter))
 	  ((and *traverse-consider-plist*
 		(plist-like-p obj))
-	   (traverse-plist-by-reference-token obj rtoken parental-setter))
+	   (traverse-plist-by-reference-token obj rtoken parental-setter parental-deleter))
 	  (t
-	   (traverse-ordinal-list-by-reference-token obj rtoken parental-setter)))
+	   (traverse-ordinal-list-by-reference-token obj rtoken parental-setter parental-deleter)))
     ;; I assume `rtoken' is not index, so considers alist (or plist).
     (if (and *traverse-consider-plist*
 	     (plist-like-p obj))
-	(traverse-plist-by-reference-token obj rtoken parental-setter)
-	(traverse-alist-by-reference-token obj rtoken parental-setter))))
+	(traverse-plist-by-reference-token obj rtoken parental-setter parental-deleter)
+	(traverse-alist-by-reference-token obj rtoken parental-setter parental-deleter))))
 
 (defparameter *traverse-nil-set-to-last-method* :list
   "Determines how to set to the last (by '-') of NIL.
@@ -181,7 +208,7 @@
 - :plist :: appends (reference-token <value>) as an plist.
 ")
 
-(defmethod traverse-by-reference-token ((obj null) rtoken parental-setter)
+(defmethod traverse-by-reference-token ((obj null) rtoken parental-setter parental-deleter)
   ;; empty. this is problematic for setting.
   (let* ((index (ignore-errors
 		  (read-reference-token-as-index rtoken)))
@@ -195,7 +222,7 @@
 	 (setter
 	  (if parental-setter
 	      (flet ((pick-setter (func)
-		       (nth-value 2 (funcall func obj rtoken parental-setter))))
+		       (nth-value 2 (funcall func obj rtoken parental-setter nil))))
 		(ecase setter-method
 		  (:list
 		   (pick-setter #'traverse-ordinal-list-by-reference-token))
@@ -209,10 +236,13 @@
 		  (:error
 		   (thunk-lambda
 		     (error 'json-pointer-access-error
-			    :format-control "Set to nil by index is not supported"))))))))
-    (values nil nil setter)))
+			    :format-control "Set to nil by index is not supported")))))))
+	 (deleter
+	  (if parental-deleter
+	      (make-bad-deleter-thunk-lambda obj rtoken))))
+    (values nil nil setter deleter)))
 
-(defmethod traverse-by-reference-token ((obj standard-object) rtoken parental-setter)
+(defmethod traverse-by-reference-token ((obj standard-object) rtoken parental-setter parental-deleter)
   ;; cl-json:fluid-object can be treated here.
   (let* ((class (class-of obj))
 	 (slot (find rtoken (class-slots class)
@@ -224,24 +254,30 @@
 		      (slot-value-using-class class obj slot))
 		  bound?
 		  (if parental-setter
-		      (setf-lambda (slot-value-using-class class obj slot)))))
+		      (setf-lambda (slot-value-using-class class obj slot)))
+		  (if parental-deleter
+		      (lambda () (slot-makunbound-using-class class obj slot)))))
 	(values nil nil
 		(if parental-setter
 		    (thunk-lambda
 		      (error 'json-pointer-access-error
 			     :format-control "object ~A does not have '~A' slot"
-			     :format-arguments (list obj rtoken))))))
+			     :format-arguments (list obj rtoken))))
+		(if parental-deleter
+		    (make-bad-deleter-thunk-lambda obj rtoken))))
     ;; TODO: support structure-object?
     ;; TODO: support condition-object?
     ))
 
-(defmethod traverse-by-reference-token ((obj hash-table) rtoken parental-setter)
+(defmethod traverse-by-reference-token ((obj hash-table) rtoken parental-setter parental-deleter)
   (multiple-value-bind (value exists?)
       (gethash rtoken obj)
     (values value
 	    exists?
 	    (if parental-setter
-		(setf-lambda (gethash rtoken obj))))))
+		(setf-lambda (gethash rtoken obj)))
+	    (if parental-deleter
+		(lambda () (remhash rtoken obj))))))
 
 (defparameter *traverse-non-adjustable-array-set-to-last-method* :create
   "Determines how to set to the last (by '-') of non-adjutable arrays.
@@ -276,25 +312,32 @@
 		  (funcall parental-setter array))
 		(vector-push x array))))))))
 
-(defmethod traverse-by-reference-token ((obj array) rtoken parental-setter)
+(defmethod traverse-by-reference-token ((obj array) rtoken parental-setter parental-deleter)
   (let ((index (read-reference-token-as-index rtoken)))
     (cond ((eq index +last-nonexistent-element+)
 	   (values nil nil
 		   (if parental-setter
-		       (make-array-tail-adder obj parental-setter))))
+		       (make-array-tail-adder obj parental-setter))
+		   (if parental-deleter
+		       (make-bad-deleter-thunk-lambda obj rtoken))))
 	  ((not (array-in-bounds-p obj index))
 	   (values nil nil
 		   (if parental-setter
 		       (thunk-lambda
 			 (error 'json-pointer-not-found-error
 				:format-control "Index ~A (pointer ~A) is out-of-index from ~A"
-				:format-arguments (list index rtoken obj))))))
+				:format-arguments (list index rtoken obj))))
+		   (if parental-deleter
+		       (make-bad-deleter-thunk-lambda obj rtoken))))
 	  (t
 	   (values (aref obj index) index
 		   (if parental-setter
-		       (setf-lambda (aref obj index))))))))
+		       (setf-lambda (aref obj index)))
+		   (if parental-deleter
+		       (lambda ()
+			  (error "under implementation -- array remove"))))))))
 
-(defun traverse-by-json-pointer (obj parsed-pointer make-setter?)
+(defun traverse-by-json-pointer (obj parsed-pointer make-setter? make-deleter?)
   "Traverses an object with a parsed json-pointer, and returns three
 values: a referred object, existence (boolean), and a closure can be
 used as a setter."
@@ -302,9 +345,12 @@ used as a setter."
 	(exists? t)
 	(setter
 	 (if make-setter?
+	     (setf-lambda obj)))
+	(deleter
+	 (if make-deleter?
 	     (setf-lambda obj))))
     (loop for (rtoken . next) on parsed-pointer
-       do (setf (values value exists? setter)
-		(traverse-by-reference-token value rtoken setter))
+       do (setf (values value exists? setter deleter)
+		(traverse-by-reference-token value rtoken setter deleter))
        while next)
-    (values value exists? setter)))
+    (values value exists? setter deleter)))

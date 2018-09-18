@@ -18,4 +18,10 @@ TODO: json query
 https://github.com/manuelstofer/json-pointer
 
 
-alist の key に数値があったらどうするのか問題
+- alist の key に数値があったらどうするのか問題
+
+
+- https://github.com/WHenderson/json-pointer-rfc6901
+
+
+- setter, deleter は修正後objectを返す(ようにしないと root object 変更時に失敗する)
