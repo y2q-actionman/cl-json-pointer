@@ -6,18 +6,20 @@
     `(lambda (,x) (setf ,access-form ,x))))
 
 (defmacro thunk-lambda (&body form)
-  "Used for delayung errors."
+  "Used by `error-thunk'."
   (with-gensyms (_)
     `(lambda (&rest ,_)
        (declare (ignore ,_))
        ,@form)))
 
+(defmacro error-thunk (error-datum &rest error-args)
+  "Used for delaying errors."
+  `(thunk-lambda (error ,error-datum ,@error-args)))
 
 (defun make-not-to-set-error-thunk (obj rtoken)
-  (thunk-lambda
-    (error 'json-pointer-not-found-error
-	   :format-control "obj ~S is not an array or an object (pointer is ~A)"
-	   :format-arguments (list obj rtoken))))
+  (error-thunk 'json-pointer-not-found-error
+	       :format-control "obj ~S is not an array or an object (pointer is ~A)"
+	       :format-arguments (list obj rtoken)))
 
 (defun read-reference-token-as-index (reference-token)
   (cond ((eq reference-token +last-nonexistent-element+)
@@ -89,11 +91,10 @@
        (funcall ,nil-handler new-list))
      new-list))
 
-(defun make-bad-deleter-thunk-lambda (obj rtoken)
-  (thunk-lambda
-    (error 'json-pointer-not-found-error
-	   :format-control "object ~S does not have a point to delete, referenced by ~A"
-	   :format-arguments (list obj rtoken))))
+(defun make-bad-deleter-thunk (obj rtoken)
+  (error-thunk 'json-pointer-not-found-error
+	       :format-control "object ~S does not have a point to delete, referenced by ~A"
+	       :format-arguments (list obj rtoken)))
 
 (defun traverse-alist-by-reference-token (alist rtoken parental-setter parental-deleter)
   ;; accepts `nil' as alist.
@@ -109,7 +110,7 @@
 		(lambda (x)
 		  (add-to-tail* alist parental-setter (cons rtoken x))))
 	    (if parental-deleter
-		(make-bad-deleter-thunk-lambda alist rtoken)))))
+		(make-bad-deleter-thunk alist rtoken)))))
 
 (defun traverse-plist-by-reference-token (plist rtoken parental-setter parental-deleter)
   ;; accepts `nil' as plist.
@@ -128,7 +129,7 @@
 			   (lambda (x)
 			     (add-to-tail* plist parental-setter rtoken x)))
 		       (if parental-deleter
-			   (make-bad-deleter-thunk-lambda plist rtoken))))))
+			   (make-bad-deleter-thunk plist rtoken))))))
 
 (defun traverse-ordinal-list-by-reference-token (list rtoken parental-setter parental-deleter)
   (let ((index (read-reference-token-as-index rtoken)))
@@ -138,7 +139,7 @@
 		    (lambda (x)
 		      (add-to-tail* list parental-setter x)))
 		(if parental-deleter
-		    (make-bad-deleter-thunk-lambda list rtoken)))
+		    (make-bad-deleter-thunk list rtoken)))
 	(if-let ((this-cons (nthcdr index list)))
 	  (values (car this-cons) this-cons
 		  (if parental-setter
@@ -148,12 +149,11 @@
 			  (error "under implementation -- ordinal list remove"))))
 	  (values nil nil
 		  (if parental-setter
-		      (thunk-lambda
-			(error 'json-pointer-not-found-error
-			       :format-control "Index ~A is out-of-index from ~A"
-			       :format-arguments (list index list))))
+		      (error-thunk 'json-pointer-not-found-error
+				   :format-control "Index ~A is out-of-index from ~A"
+				   :format-arguments (list index list)))
 		  (if parental-deleter
-		      (make-bad-deleter-thunk-lambda list rtoken)))))))
+		      (make-bad-deleter-thunk list rtoken)))))))
 
 
 (defun alist-like-p (list)
@@ -234,12 +234,11 @@
 		   (make-array-tail-adder #() parental-setter
 					  :set-to-last-method :create))
 		  (:error
-		   (thunk-lambda
-		     (error 'json-pointer-access-error
-			    :format-control "Set to nil by index is not supported")))))))
+		   (error-thunk 'json-pointer-access-error
+				:format-control "Set to nil by index is not supported"))))))
 	 (deleter
 	  (if parental-deleter
-	      (make-bad-deleter-thunk-lambda obj rtoken))))
+	      (make-bad-deleter-thunk obj rtoken))))
     (values nil nil setter deleter)))
 
 (defmethod traverse-by-reference-token ((obj standard-object) rtoken parental-setter parental-deleter)
@@ -259,17 +258,17 @@
 		      (lambda () (slot-makunbound-using-class class obj slot)))))
 	(values nil nil
 		(if parental-setter
-		    (thunk-lambda
-		      (error 'json-pointer-access-error
-			     :format-control "object ~A does not have '~A' slot"
-			     :format-arguments (list obj rtoken))))
+		    (error-thunk 'json-pointer-access-error
+				 :format-control "object ~A does not have '~A' slot"
+				 :format-arguments (list obj rtoken)))
 		(if parental-deleter
-		    (make-bad-deleter-thunk-lambda obj rtoken))))
+		    (make-bad-deleter-thunk obj rtoken))))
     ;; TODO: support structure-object?
     ;; TODO: support condition-object?
     ))
 
 (defmethod traverse-by-reference-token ((obj hash-table) rtoken parental-setter parental-deleter)
+  ;; TODO: use `compare-string-by-case'? (depending on json lib..)
   (multiple-value-bind (value exists?)
       (gethash rtoken obj)
     (values value
@@ -319,23 +318,22 @@
 		   (if parental-setter
 		       (make-array-tail-adder obj parental-setter))
 		   (if parental-deleter
-		       (make-bad-deleter-thunk-lambda obj rtoken))))
+		       (make-bad-deleter-thunk obj rtoken))))
 	  ((not (array-in-bounds-p obj index))
 	   (values nil nil
 		   (if parental-setter
-		       (thunk-lambda
-			 (error 'json-pointer-not-found-error
-				:format-control "Index ~A (pointer ~A) is out-of-index from ~A"
-				:format-arguments (list index rtoken obj))))
+		       (error-thunk 'json-pointer-not-found-error
+				    :format-control "Index ~A (pointer ~A) is out-of-index from ~A"
+				    :format-arguments (list index rtoken obj)))
 		   (if parental-deleter
-		       (make-bad-deleter-thunk-lambda obj rtoken))))
+		       (make-bad-deleter-thunk obj rtoken))))
 	  (t
 	   (values (aref obj index) index
 		   (if parental-setter
 		       (setf-lambda (aref obj index)))
 		   (if parental-deleter
 		       (lambda ()
-			  (error "under implementation -- array remove"))))))))
+			 (error "under implementation -- array remove"))))))))
 
 (defun traverse-by-json-pointer (obj parsed-pointer make-setter? make-deleter?)
   "Traverses an object with a parsed json-pointer, and returns three

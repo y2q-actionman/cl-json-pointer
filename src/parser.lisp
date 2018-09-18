@@ -27,11 +27,9 @@
 (defmethod parse-json-pointer ((stream stream) &key (accept-uri-fragment t) &allow-other-keys)
   ;; checks '#'
   (when accept-uri-fragment
-    (let ((char0 (read-char stream nil :eof)))
-      (case char0
-	(#\# (progn))			; '#' accepted
-	(:eof (progn))			; do not unread EOF.
-	(otherwise (unread-char char0 stream)))))
+    (case (peek-char nil stream nil)
+      (#\# (read-char stream))	; accepts '#'
+      (otherwise (progn))))
   ;; checks '/' at the beginning, and consume it here.
   (let ((char0 (read-char stream nil :eof)))
     (case char0
