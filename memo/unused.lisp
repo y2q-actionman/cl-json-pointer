@@ -1,9 +1,28 @@
 (cl:defpackage #:cl-json-pointer/trush
   (:use :cl #:cl-json-pointer
-	#:alexandria #:closer-mop)
+	#:alexandria)
   (:export))
 
 (in-package :cl-json-pointer/trush)
+
+(defun remove-nth (list n)
+  (check-type n (integer 0))
+  (loop with heads = nil
+     for i from 0 below n
+     do (push (pop list) heads)
+     while list
+     finally
+       (return (nreconc heads (cdr list)))))
+
+(defun delete-nth (list n)
+  (check-type n (integer 0))
+  (if (zerop n)
+      (cdr list)
+      (loop for c on list
+	 for i from 0 below (1- n)
+	 finally
+	   (setf (cdr c) (cddr c))
+	   (return list))))
 
 
 ;;; deleted from test codes.
