@@ -10,6 +10,9 @@
   ;; I don't want to treat string as an array.
   "If this is T, cl-json-pointer trests string as atom.")
 
+(defparameter *traverse-set-to-list-destructive* nil
+  "Determines set to list destructively or not.")
+
 (defparameter *traverse-consider-plist* nil
   ;; I think there is no way to define good `plist-like-p', because plist
   ;; does not restricted. Whether its keys are compared by `eq'
@@ -58,6 +61,29 @@
 (defun plist-like-p (list)
   (loop for (k nil) on list by #'cddr
      always (symbolp k)))
+
+(defun find-previous-cons (list cons &optional copy-head-p) ; used by list setters.
+  "Finds the previous cons of the passed `cons'.
+If `copy-head-p' is T, makes a partial copy of the `list' between the
+head and the previous cons of the passed cons."
+  (loop for c on list
+     when copy-head-p
+     collect (car c) into copy-head
+     until (eq (cdr c) cons)
+     finally
+       (return (values c copy-head))))
+
+(defun clone-and-replace-of-cons (list cons value)
+  (multiple-value-bind (prev-cons heads)
+      (find-previous-cons list cons t)
+    (declare (ignore prev-cons))
+    (nconc heads (list value) (cdr cons))))
+
+(defun remove-cons (list cons)
+  (multiple-value-bind (prev-cons heads)
+      (find-previous-cons list cons t)
+    (declare (ignore prev-cons))
+    (nconc heads (cdr cons))))
 
 (defun compare-string-by-readtable-case (a b &optional (case (readtable-case *readtable*)))
   ;; TODO: should I use `ignore-errors' for alist (or plist) ?
@@ -139,8 +165,12 @@
     (values (cdr entry) entry
 	    (if parental-setter
 		(chained-setter-lambda (x) (alist parental-setter)
-		  (+delete-request+ (deletef alist entry)) ; TODO: destructive???
-		  (otherwise (setf (cdr entry) x))))) ; TODO: destructive???
+		  (+delete-request+ (if *traverse-set-to-list-destructive*
+					(deletef alist entry)
+					(removef alist entry)))
+		  (otherwise (if *traverse-set-to-list-destructive*
+				 (setf (cdr entry) x)
+				 (push (cons rtoken x) alist))))))
     (values nil nil
 	    (if parental-setter
 		(chained-setter-lambda (x) (alist parental-setter)
@@ -156,13 +186,15 @@
 		    (if parental-setter
 			(chained-setter-lambda (x) (plist parental-setter)
 			  (+delete-request+ (error "under implementation -- plist remove")) ; TODO
-			  (otherwise (setf (cadr plist-head) x)))))  ; TODO: destructive???
+			  (otherwise (if *traverse-set-to-list-destructive*
+					 (setf (cadr plist-head) x)
+					 (setf plist (list* rtoken x plist)))))))
      finally
        (return (values nil nil
 		       (if parental-setter
 			   (chained-setter-lambda (x) (plist parental-setter)
 			     (+delete-request+ (bad-deleter-error plist rtoken))
-			     (otherwise (setf plist (list* rtoken x plist))))))))) ; TOOD: list*-f?
+			     (otherwise (setf plist (list* rtoken x plist)))))))))
 		       
 (defun traverse-ordinal-list-by-reference-token (list rtoken parental-setter)
   (let ((index (read-reference-token-as-index rtoken)))
@@ -171,13 +203,18 @@
 		(if parental-setter
 		    (chained-setter-lambda (x) (list parental-setter)
 		      (+delete-request+ (bad-deleter-error list rtoken))
-		      (otherwise (appendf list (list x)))))) ; TODO: destructive?
+		      (otherwise (if *traverse-set-to-list-destructive*
+				     (nconcf list (list x))
+				     (appendf list (list x)))))))
 	(if-let ((this-cons (nthcdr index list)))
 	  (values (car this-cons) this-cons
 		  (if parental-setter
 		      (chained-setter-lambda (x) (list parental-setter)
 			(+delete-request+ (error "under implementation -- ordinal list remove"))
-			(otherwise (setf (car this-cons) x))))) ; TODO: destructive?
+			(otherwise (if *traverse-set-to-list-destructive*
+				       (setf (car this-cons) x)
+				       (setf list (clone-and-replace-of-cons
+						   list this-cons x)))))))
 	  (values nil nil
 		  (if parental-setter
 		      (thunk-lambda
