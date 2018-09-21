@@ -94,9 +94,10 @@
   ;; (In JS: can unset values with `undefined`)
   (delete! obj "/a")
   (assert (not (cljsp:exists-p obj  "/a")))
-  ;; TODO: Determine how to treat array remove.
-  ;; (delete! obj "/d/e/1")
-  ;; (assert (not (cljsp:exists-p obj "/d/e/1")))
+  (delete! obj "/d/e/1")
+  ;; In my implemented, deleting from list only sets `nil', so the element still exists.
+  (assert (null (cljsp:get obj "/d/e/1")))
+  (assert (cljsp:exists-p obj "/d/e/1"))
 
   ;; returns `undefined` when path extends beyond any existing objects
   (assert (not (cljsp:exists-p obj "/x/y/z")))

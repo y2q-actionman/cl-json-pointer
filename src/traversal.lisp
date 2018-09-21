@@ -1,9 +1,5 @@
 (in-package :cl-json-pointer)
 
-(defconstant +delete-request+
-  '+delete-request+
-  "A special value indicates deletion, used by setters.")
-
 ;;; Switches
 
 (defparameter *traverse-treat-string-as-atom* t
@@ -54,7 +50,6 @@
 
 (defmacro chained-setter-lambda ((&rest vars) (target next-function) &body body)
   `(lambda (,@vars)
-     (declare (ignorable ,@vars))
      (funcall ,next-function
 	      (progn ,@body ,target))))
 
@@ -196,10 +191,10 @@
 		     (chained-setter-lambda (x) (list next-setter)
 		       (setf list (make-replaced-list-on-cons list this-cons x))))
 		    (:delete
-		     (chained-setter-lambda (x) (list next-setter)
+		     (chained-setter-lambda () (list next-setter)
 		       (setf list (delete-cons list this-cons))))
 		    (:remove
-		     (chained-setter-lambda (x) (list next-setter)
+		     (chained-setter-lambda () (list next-setter)
 		       (setf list (remove-cons list this-cons))))))
 	  (values nil nil
 		  (if set-method
@@ -268,7 +263,7 @@
 		 (chained-setter-lambda (x) (obj next-setter)
 		   (setf (slot-value-using-class class obj slot) x)))
 		((:remove :delete)
-		 (chained-setter-lambda (x) (obj next-setter)
+		 (chained-setter-lambda () (obj next-setter)
 		   (slot-makunbound-using-class class obj slot))))))
     (values nil nil
 	    (if set-method
@@ -295,7 +290,7 @@
 	       (chained-setter-lambda (x) (obj next-setter)
 		 (setf (gethash rtoken obj) x)))
 	      ((:delete  :remove)
-	       (chained-setter-lambda (x) (obj next-setter)
+	       (chained-setter-lambda () (obj next-setter)
 		 (remhash rtoken obj)))))))
 
 (defun array-try-push (array x)
@@ -353,9 +348,9 @@
 		      (chained-setter-lambda (x) (obj next-setter)
 			(setf (aref obj index) x)))
 		     ((:delete :remove)
-		      (chained-setter-lambda (x) (obj next-setter)
+		      (chained-setter-lambda () (obj next-setter)
 			(ecase *traverse-array-delete-method*
-			  ((nil) (setf (aref obj index) x))
+			  ((nil) (setf (aref obj index) nil))
 			  (:error
 			   (error 'json-pointer-access-error
 				  :format-control "Delete from array is error (array ~A, index ~A)"
