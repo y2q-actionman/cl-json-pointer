@@ -14,7 +14,7 @@
   (let* ((parsed-ptr
 	  (parse-json-pointer pointer))
 	 (setter
-	  (nth-value 2 (traverse-by-json-pointer obj parsed-ptr t))))
+	  (nth-value 2 (traverse-by-json-pointer obj parsed-ptr :update))))
     (funcall setter value)))
 
 #+ignore
@@ -24,4 +24,8 @@
 ;;; FIXME: set-by-json-pointer may create a new `obj', so should I set `obj' again?
 
 (defun delete-by-json-pointer (obj pointer)
-  (set-by-json-pointer obj pointer +delete-request+))
+  (let* ((parsed-ptr
+	  (parse-json-pointer pointer))
+	 (deleter
+	  (nth-value 2 (traverse-by-json-pointer obj parsed-ptr :delete))))
+    (funcall deleter)))
