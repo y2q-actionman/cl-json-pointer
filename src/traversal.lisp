@@ -10,7 +10,7 @@
   ;; I don't want to treat string as an array.
   "If this is T, cl-json-pointer trests string as atom.")
 
-(defparameter *traverse-set-to-list-destructive* nil
+(defparameter *traverse-set-to-list-destructive* t
   "Determines set to list destructively or not.")
 
 (defparameter *traverse-consider-plist* nil
@@ -54,49 +54,6 @@
 ")
 
 ;;; Tools
-
-(defun alist-like-p (list)
-  (every #'consp list))
-
-(defun plist-like-p (list)
-  (loop for (k nil) on list by #'cddr
-     always (symbolp k)))
-
-(defun find-previous-cons (list cons &optional copy-head-p) ; used by list setters.
-  "Finds the previous cons of the passed `cons'.
-If `copy-head-p' is T, makes a partial copy of the `list' between the
-head and the previous cons of the passed cons."
-  (loop for c on list
-     when copy-head-p
-     collect (car c) into copy-head
-     until (eq (cdr c) cons)
-     finally
-       (return (values c copy-head))))
-
-(defun clone-and-replace-of-cons (list cons value)
-  (multiple-value-bind (prev-cons heads)
-      (find-previous-cons list cons t)
-    (declare (ignore prev-cons))
-    (nconc heads (list value) (cdr cons))))
-
-(defun remove-cons (list cons)
-  (multiple-value-bind (prev-cons heads)
-      (find-previous-cons list cons t)
-    (declare (ignore prev-cons))
-    (nconc heads (cdr cons))))
-
-(defun compare-string-by-readtable-case (a b &optional (case (readtable-case *readtable*)))
-  ;; TODO: should I use `ignore-errors' for alist (or plist) ?
-  (ecase case
-    ((:upcase :downcase) (string-equal a b))
-    ((:preserve :invert) (string= a b))))
-
-(defmacro thunk-lambda (&body form)
-  "Used for making thunks."
-  (with-gensyms (_)
-    `(lambda (&rest ,_)
-       (declare (ignore ,_))
-       ,@form)))
 
 (defmacro chained-setter-lambda ((var) (target next-function) &body case-clauses)
   `(lambda (,var)
@@ -167,6 +124,7 @@ head and the previous cons of the passed cons."
 		(chained-setter-lambda (x) (alist parental-setter)
 		  (+delete-request+ (if *traverse-set-to-list-destructive*
 					(deletef alist entry)
+					;; FIXME: add 'delete-all' method?, or shadows it by `nil'?
 					(removef alist entry)))
 		  (otherwise (if *traverse-set-to-list-destructive*
 				 (setf (cdr entry) x)
@@ -185,10 +143,14 @@ head and the previous cons of the passed cons."
      return (values v plist-head
 		    (if parental-setter
 			(chained-setter-lambda (x) (plist parental-setter)
-			  (+delete-request+ (error "under implementation -- plist remove")) ; TODO
-			  (otherwise (if *traverse-set-to-list-destructive*
-					 (setf (cadr plist-head) x)
-					 (setf plist (list* rtoken x plist)))))))
+			  (+delete-request+
+			   (if *traverse-set-to-list-destructive*
+			       (setf plist (delete-cons plist plist-head 2))
+			       (setf plist (remove-cons plist plist-head 2)))) ; FIXME: add 'delete-all' method?
+			  (otherwise
+			   (if *traverse-set-to-list-destructive*
+			       (setf (cadr plist-head) x)
+			       (setf plist (list* rtoken x plist)))))))
      finally
        (return (values nil nil
 		       (if parental-setter
@@ -210,11 +172,12 @@ head and the previous cons of the passed cons."
 	  (values (car this-cons) this-cons
 		  (if parental-setter
 		      (chained-setter-lambda (x) (list parental-setter)
-			(+delete-request+ (error "under implementation -- ordinal list remove"))
+			(+delete-request+ (if *traverse-set-to-list-destructive*
+					      (setf list (delete-cons list this-cons)) 
+					      (setf list (remove-cons list this-cons))))
 			(otherwise (if *traverse-set-to-list-destructive*
 				       (setf (car this-cons) x)
-				       (setf list (clone-and-replace-of-cons
-						   list this-cons x)))))))
+				       (setf list (make-replaced-list-on-cons list this-cons x)))))))
 	  (values nil nil
 		  (if parental-setter
 		      (thunk-lambda

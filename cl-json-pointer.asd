@@ -11,6 +11,7 @@
 	    :serial t
 	    :components
 	    ((:file "package")
+	     (:file "util")
 	     (:file "condition")
 	     (:file "parser")
 	     (:file "traversal")

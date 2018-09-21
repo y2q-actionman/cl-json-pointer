@@ -29,3 +29,8 @@ https://github.com/manuelstofer/json-pointer
 - deleter は setter と統合。
   deleter に特殊symbolが来たら delete する。
   deleter した結果は、 setter を呼ぶ形で上に投げないといけない。
+
+
+
+- set って 破壊的 update っぽい。
+  破壊的でない set は、 add という名前にして別にする？
