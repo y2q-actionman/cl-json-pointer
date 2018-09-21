@@ -34,3 +34,7 @@ https://github.com/manuelstofer/json-pointer
 
 - set って 破壊的 update っぽい。
   破壊的でない set は、 add という名前にして別にする？
+
+- 一応 setter が複数回呼ばれることを想定しているが、 alist や plist で
+  cons を扱っていて、これだと複数回呼んでも意味がなさそう。
+  (何を closure に掴ませるかという設定の話になるが)

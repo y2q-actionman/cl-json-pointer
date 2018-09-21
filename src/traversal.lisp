@@ -10,9 +10,6 @@
   ;; I don't want to treat string as an array.
   "If this is T, cl-json-pointer trests string as atom.")
 
-(defparameter *traverse-set-to-list-destructive* t
-  "Determines set to list destructively or not.")
-
 (defparameter *traverse-consider-plist* nil
   ;; I think there is no way to define good `plist-like-p', because plist
   ;; does not restricted. Whether its keys are compared by `eq'
@@ -122,22 +119,23 @@
 	      ((nil) nil)
 	      (:update
 	       (chained-setter-lambda (x) (alist next-setter)
-		 (if *traverse-set-to-list-destructive*
-		     (setf (cdr entry) x)
-		     (push (cons rtoken x) alist))))
-	      (:delete
-	       (chained-setter-lambda () (alist next-setter)
-		 (if *traverse-set-to-list-destructive*
-		     (deletef alist entry)
-		     ;; FIXME: add 'delete-all' method?, or shadows it by `nil'?
-		     (removef alist entry))))))
-    (values nil nil
-	    (ecase set-method
-	      ((nil) nil)
-	      (:update
+		 (setf (cdr entry) x)))
+	      (:add
 	       (chained-setter-lambda (x) (alist next-setter)
 		 (push (cons rtoken x) alist)))
 	      (:delete
+	       (chained-setter-lambda () (alist next-setter)
+		 (deletef alist entry)))
+	      (:remove
+	       (chained-setter-lambda () (alist next-setter)
+		 (removef alist entry)))))
+    (values nil nil
+	    (ecase set-method
+	      ((nil) nil)
+	      ((:add :update)
+	       (chained-setter-lambda (x) (alist next-setter)
+		 (push (cons rtoken x) alist)))
+	      ((:delete :remove)
 	       (thunk-lambda
 		 (bad-deleter-error alist rtoken)))))))
 
@@ -151,24 +149,24 @@
 		      ((nil) nil)
 		      (:update
 		       (chained-setter-lambda (x) (plist next-setter)
-			 ;; FIXME: add 'delete-all' method?
-			 (if *traverse-set-to-list-destructive*
-			     (setf (cadr plist-head) x)
-			     (setf plist (list* rtoken x plist)))))
+			 (setf (cadr plist-head) x)))
+		      (:add
+		       (chained-setter-lambda (x) (plist next-setter)
+			 (setf plist (list* rtoken x plist))))
 		      (:delete
 		       (chained-setter-lambda () (plist next-setter)
-			 ;; FIXME: add 'delete-all' method?
-			 (if *traverse-set-to-list-destructive*
-			     (setf plist (delete-cons plist plist-head 2))
-			     (setf plist (remove-cons plist plist-head 2)))))))
+			 (setf plist (delete-cons plist plist-head 2))))
+		      (:remove
+		       (chained-setter-lambda () (plist next-setter)
+			 (setf plist (remove-cons plist plist-head 2))))))
      finally
        (return (values nil nil
 		       (ecase set-method
 			 ((nil) nil)
-			 (:update
+			 ((:update :add)
 			  (chained-setter-lambda (x) (plist next-setter)
 			    (setf plist (list* rtoken x plist))))
-			 (:delete
+			 ((:delete :remove)
 			  (thunk-lambda
 			    (bad-deleter-error plist rtoken))))))))
 		       
@@ -180,10 +178,11 @@
 		  ((nil) nil)
 		  (:update
 		   (chained-setter-lambda (x) (list next-setter)
-		     (if *traverse-set-to-list-destructive*
-			 (nconcf list (list x))
-			 (appendf list (list x)))))
-		  (:delete
+		     (nconcf list (list x))))
+		  (:add
+		   (chained-setter-lambda (x) (list next-setter)
+		     (appendf list (list x))))
+		  ((:delete :remove)
 		   (thunk-lambda
 		     (bad-deleter-error list rtoken)))))
 	(if-let ((this-cons (nthcdr index list)))
@@ -192,14 +191,16 @@
 		    ((nil) nil)
 		    (:update
 		     (chained-setter-lambda (x) (list next-setter)
-		       (if *traverse-set-to-list-destructive*
-			   (setf (car this-cons) x)
-			   (setf list (make-replaced-list-on-cons list this-cons x)))))
+		       (setf (car this-cons) x)))
+		    (:add
+		     (chained-setter-lambda (x) (list next-setter)
+		       (setf list (make-replaced-list-on-cons list this-cons x))))
 		    (:delete
 		     (chained-setter-lambda (x) (list next-setter)
-		       (if *traverse-set-to-list-destructive*
-			   (setf list (delete-cons list this-cons)) 
-			   (setf list (remove-cons list this-cons)))))))
+		       (setf list (delete-cons list this-cons))))
+		    (:remove
+		     (chained-setter-lambda (x) (list next-setter)
+		       (setf list (remove-cons list this-cons))))))
 	  (values nil nil
 		  (if set-method
 		      (thunk-lambda
@@ -226,7 +227,7 @@
 (defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.
   (let* ((index (read-reference-token-as-index rtoken nil))
-	 (setter-method
+	 (nil-method
 	  (cond ((eq index +last-nonexistent-element+)
 		 *traverse-nil-set-to-last-method*)
 		((integerp index)
@@ -237,7 +238,7 @@
 	  (if set-method
 	      (flet ((pick-setter (func)
 		       (nth-value 2 (funcall func obj rtoken set-method next-setter))))
-		(ecase setter-method
+		(ecase nil-method
 		  (:list
 		   (pick-setter #'traverse-ordinal-list-by-reference-token))
 		  (:alist
@@ -245,8 +246,8 @@
 		  (:plist
 		   (pick-setter #'traverse-plist-by-reference-token))
 		  (:array
-		   (make-array-tail-adder #() next-setter
-					  :set-to-last-method :create))
+		   (chained-setter-lambda (x) (obj next-setter)
+		     (setf obj (add-to-array-tail obj x))))
 		  (:error
 		   (thunk-lambda
 		     (error 'json-pointer-access-error
@@ -263,10 +264,10 @@
 	      bound?
 	      (ecase set-method
 		((nil) nil)
-		(:update
+		((:update :add)
 		 (chained-setter-lambda (x) (obj next-setter)
 		   (setf (slot-value-using-class class obj slot) x)))
-		(:delete
+		((:remove :delete)
 		 (chained-setter-lambda (x) (obj next-setter)
 		   (slot-makunbound-using-class class obj slot))))))
     (values nil nil
@@ -290,47 +291,53 @@
     (values value exists?
 	    (ecase set-method
 	      ((nil) nil)
-	      (:update
+	      ((:add :update) 
 	       (chained-setter-lambda (x) (obj next-setter)
 		 (setf (gethash rtoken obj) x)))
-	      (:delete
+	      ((:delete  :remove)
 	       (chained-setter-lambda (x) (obj next-setter)
 		 (remhash rtoken obj)))))))
 
-(defun make-array-tail-adder (array next-setter
-			      &key (set-to-last-method *traverse-non-adjustable-array-set-to-last-method*))
-  (lambda (x)
-    (check-type array (array * (*)))
-    (when (eq x +delete-request+)
-      (bad-deleter-error array +last-nonexistent-element+))
-    (let ((adjustable? (adjustable-array-p array))
-	  (has-fill-pointer? (array-has-fill-pointer-p array)))
-      (cond ((and adjustable?
-		  has-fill-pointer?)
-	     (vector-push-extend x array))
-	    ((and has-fill-pointer?
-		  (vector-push x array))) ; uses `vector-push' result as condition.
-	    (t
-	     (ecase set-to-last-method
-	       (:error
-		(error 'json-pointer-access-error
-		       :format-control "tried to add to the tail of non-adjutable non-fill-pointer array"))
-	       (:create
-		(let* ((original-length (length array))
-		       (new-array (make-array (1+ original-length)
-					      :adjustable t
-					      :fill-pointer original-length)))
-		  (replace new-array array)
-		  (setf array new-array))
-		(vector-push x array))))))
-    (funcall next-setter array)))
+(defun array-try-push (array x)
+  (let ((adjustable? (adjustable-array-p array))
+	(has-fill-pointer? (array-has-fill-pointer-p array)))
+    (if has-fill-pointer?
+	(if adjustable?
+	    (vector-push-extend x array)
+	    (vector-push x array)) ; uses `vector-push' result as condition.
+	nil)))
+
+(defun add-to-array-tail (array x &key (set-to-last-method
+					*traverse-non-adjustable-array-set-to-last-method*))
+  ;; `array' may be NIL, because this may be called at traversing NIL.
+  (let ((pushed? (if (arrayp array)
+		     (array-try-push array x)
+		     nil)))
+    (unless pushed?
+      (ecase set-to-last-method
+	(:error
+	 (error 'json-pointer-access-error
+		:format-control "tried to add to the tail of non-adjutable non-fill-pointer array"))
+	(:create
+	 (let* ((o-length (length array))
+		(new-array (make-array (1+ o-length) :adjustable t :fill-pointer o-length)))
+	   (replace new-array array)
+	   (setf array new-array))
+	 (vector-push x array)))))
+  array)
 
 (defmethod traverse-by-reference-token ((obj array) rtoken set-method next-setter)
   (let ((index (read-reference-token-as-index rtoken)))
     (cond ((eq index +last-nonexistent-element+)
 	   (values nil nil
-		   (if set-method
-		       (make-array-tail-adder obj next-setter))))
+		   (ecase set-method
+		     ((nil) nil)
+		     ((:update :add)
+		      (chained-setter-lambda (x) (obj next-setter)
+			(setf obj (add-to-array-tail obj x))))
+		     ((:delete :remove)
+		      (thunk-lambda
+			(bad-deleter-error obj +last-nonexistent-element+))))))
 	  ((not (array-in-bounds-p obj index))
 	   (values nil nil
 		   (if set-method
@@ -342,10 +349,10 @@
 	   (values (aref obj index) index
 		   (ecase set-method
 		     ((nil) nil)
-		     (:update
+		     ((:update :add)
 		      (chained-setter-lambda (x) (obj next-setter)
 			(setf (aref obj index) x)))
-		     (:delete
+		     ((:delete :remove)
 		      (chained-setter-lambda (x) (obj next-setter)
 			(ecase *traverse-array-delete-method*
 			  ((nil) (setf (aref obj index) x))
@@ -362,8 +369,8 @@ the referred object, existence (boolean), and a closure can be used as a setter.
 - `nil' :: Do not set to `obj'.
 - `:update' :: Destructively updates into `obj'.
 - `:delete' :: Destructively deletes from `obj'.
-- `:add' :: Returns new `obj' contains the set'ed value. (not destructive)
-- `:remove' :: Returns new `obj' does not contain the removed value. (not destructive)
+- `:add' :: If changing a list, makes a new list contains the set'ed value. (non-list is still modified).
+- `:remove' :: If deleting form a list, makes new list does not contain the removed value. (non-list is still modified).
 "
   (assert (not (member set-method '(:remove :add)))
 	  () "Sorry, not implemented set-method ~A" set-method)
