@@ -29,13 +29,3 @@
     `(multiple-value-bind (,ret ,condition)
 	 (ignore-errors (progn ,@body))
        (assert (and (null ,ret) ,condition)))))
-
-;;; TODO: FIXME: include it to main library?
-(define-modify-macro update-by-json-pointer (pointer value)
-  set-by-json-pointer)
-
-(define-modify-macro update! (pointer value)
-  cljsp:set)
-
-(define-modify-macro delete! (pointer)
-  cljsp:delete)

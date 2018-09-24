@@ -58,32 +58,32 @@
   (assert (equal (cljsp:get obj "/d/e/1/b") 4))
   (assert (equal (cljsp:get obj "/d/e/2/c") 5))
 
-  (update! obj "/a" 2)
+  (cljsp:update obj "/a" 2)
   (assert (equal (cljsp:get obj "/a") 2))
-  (update! obj "/b/c" 3)
+  (cljsp:update obj "/b/c" 3)
   (assert (equal (cljsp:get obj "/b/c") 3))
-  (update! obj "/d/e/0/a" 4)
+  (cljsp:update obj "/d/e/0/a" 4)
   (assert (equal (cljsp:get obj "/d/e/0/a") 4))
-  (update! obj "/d/e/1/b" 5)
+  (cljsp:update obj "/d/e/1/b" 5)
   (assert (equal (cljsp:get obj "/d/e/1/b") 5))
-  (update! obj "/d/e/2/c" 6)
+  (cljsp:update obj "/d/e/2/c" 6)
   (assert (equal (cljsp:get obj "/d/e/2/c") 6))
 
   ;; set nested properties
-  (update! obj "/f/g/h/i" 6)
+  (cljsp:update obj "/f/g/h/i" 6)
   (assert (equal (cljsp:get obj "/f/g/h/i")  6))
 
   ;; set an array
-  (update! obj "/f/g/h/foo/-" "test")
+  (cljsp:update obj "/f/g/h/foo/-" "test")
   (let ((arr (cljsp:get obj  "/f/g/h/foo")))
     ;; TODO: add a way to specify type.
     ;; (assert (typep arr 'array))
     (assert (equal (elt arr 0) "test")))
 
   ;; can set `null` as a value
-  (update! obj "/f/g/h/foo/0" nil)
+  (cljsp:update obj "/f/g/h/foo/0" nil)
   (assert (null (cljsp:get obj "/f/g/h/foo/0")))
-  (update! obj "/b/c" nil)
+  (cljsp:update obj "/b/c" nil)
   (assert (null (cljsp:get obj "/b/c")))
 
   (assert (equalp (cljsp:get obj "") obj))
@@ -92,9 +92,9 @@
 
   ;; delete operations.
   ;; (In JS: can unset values with `undefined`)
-  (delete! obj "/a")
+  (cljsp:delete obj "/a")
   (assert (not (cljsp:exists-p obj  "/a")))
-  (delete! obj "/d/e/1")
+  (cljsp:delete obj "/d/e/1")
   ;; In my implemented, deleting from list only sets `nil', so the element still exists.
   (assert (null (cljsp:get obj "/d/e/1")))
   (assert (cljsp:exists-p obj "/d/e/1"))
@@ -139,7 +139,7 @@
   ;; draft-ietf-appsawg-json-pointer-08 has special array rules
   (assert-condition (cljsp:get ary "/01"))
 
-  (update! ary "/-" "three")
+  (cljsp:update ary "/-" "three")
   (assert (equal (aref ary 3) "three"))
 
   t)
@@ -189,7 +189,7 @@
 (defun test1-a (&aux (a (read-json-string +test1-a+)))
   (let ((pointer (cljsp:parse "/foo")))
     (assert (equal (cljsp:get a pointer) "bar"))
-    (update! a pointer "test")
+    (cljsp:update a pointer "test")
     (assert (equal (cljsp:get a pointer) "test"))
 
     (let ((result-obj (read-json-string #{"foo": "test"})))

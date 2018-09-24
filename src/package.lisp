@@ -14,4 +14,7 @@
    #:get-by-json-pointer
    #:exists-p-by-json-pointer
    #:set-by-json-pointer
-   #:delete-by-json-pointer))
+   #:add-by-json-pointer
+   #:delete-by-json-pointer
+   #:remove-by-json-pointer
+   #:update-by-json-pointer))
