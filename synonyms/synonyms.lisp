@@ -31,5 +31,8 @@
 (defun remove (obj pointer)
   (remove-by-json-pointer obj pointer))
 
+(define-setf-expander get (obj pointer &environment env)
+  (get-setf-expansion `(get-by-json-pointer ,obj ,pointer) env))
+
 (defmacro update (obj pointer value)
   `(update-by-json-pointer ,obj ,pointer ,value))
