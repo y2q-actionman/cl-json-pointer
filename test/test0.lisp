@@ -54,7 +54,8 @@
      for expected in `(,json
 		       #("bar" "baz") "bar"
 		       0 1 2 3 4 5 6 7 8)
-     always (assert (equalp obj expected))))
+     always (assert (equalp obj expected)))
+  t)
 
 (defclass test-class ()
   ((hoge :initform 'hoge-value)))
@@ -66,8 +67,19 @@
 		   'hoge-value)))
   t)
 
+(defun test-traverse-json-3 ()
+  (let ((obj '((:a . 1) (:b . 2))))
+    (assert (equal (get-by-json-pointer obj "/a") 1))
+    (assert (equal (get-by-json-pointer obj "/b") 2))
+    (let ((setf-ed-obj obj))
+      (setf (get-by-json-pointer setf-ed-obj "/c") 3) ; This `setf' updates `setf-ed-obj' itself.
+      (assert (not (equal obj setf-ed-obj)))
+      (assert (equal (get-by-json-pointer setf-ed-obj "/c") 3))))
+  t)
+
 (defun test0-run ()
   (and (test-parse-json-pointer)
        (test-traverse-json)
-       (test-traverse-json-2))
+       (test-traverse-json-2)
+       (test-traverse-json-3))
   t)
