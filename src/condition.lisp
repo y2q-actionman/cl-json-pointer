@@ -9,7 +9,7 @@
 (define-condition json-pointer-not-found-error (json-pointer-error)
   ())
 
-(define-condition json-pointer-bad-index-error (json-pointer-error)
+(define-condition json-pointer-bad-reference-token-error (json-pointer-error)
   ())
 
 (define-condition json-pointer-access-error (json-pointer-error)

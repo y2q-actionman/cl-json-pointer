@@ -4,6 +4,10 @@
   (every #'consp list))
 
 (defun plist-like-p (list)
+  ;; I think there is no way to define a good `plist-like-p', because plist
+  ;; does not restricted on its keys. Whether its keys are compared by `eq'
+  ;; (http://www.lispworks.com/documentation/HyperSpec/Body/f_eq.htm),
+  ;; I think I should not assume the keys are always a symbol.
   (loop for (k nil) on list by #'cddr
      always (symbolp k)))
 
@@ -11,6 +15,7 @@
   "Finds the previous cons of the `cons' in the `list'.
 If `copy-head-p' is true, makes a partial copy of the `list' between the
 head and the previous cons of the passed cons."
+  (declare (type list list) (type cons cons))
   (loop for c on list
      when copy-head-p
      collect (car c) into copy-head
@@ -18,7 +23,7 @@ head and the previous cons of the passed cons."
      finally
        (return (values c copy-head))))
 
-(defun make-replaced-list-on-cons (list cons value)
+(defun clone-and-replace-on-cons (list cons value)
   (multiple-value-bind (prev-cons heads)
       (find-previous-cons list cons t)
     (declare (ignore prev-cons))
@@ -37,7 +42,7 @@ head and the previous cons of the passed cons."
 	(setf (cdr prev-cons) (nthcdr count cons))
 	list)))
 
-(defun compare-string-by-readtable-case (a b &optional (case (readtable-case *readtable*)))
+(defun compare-string-by-readtable-case (a b &key (case (readtable-case *readtable*)))
   ;; TODO: should I use `ignore-errors' for alist (or plist) ?
   (ecase case
     ((:upcase :downcase) (string-equal a b))

@@ -7,10 +7,6 @@
   "If this is T, cl-json-pointer trests string as atom.")
 
 (defparameter *traverse-consider-plist* nil
-  ;; I think there is no way to define good `plist-like-p', because plist
-  ;; does not restricted. Whether its keys are compared by `eq'
-  ;; (http://www.lispworks.com/documentation/HyperSpec/Body/f_eq.htm),
-  ;; I think I should not assume the keys are always a symbol.
   "If this is T, cl-json-pointer considers plists at traversaling.")
 
 (defparameter *traverse-nil-set-to-last-method* :list
@@ -55,25 +51,28 @@
 
 ;;; Reference Token
 
-(defun read-reference-token-as-index (reference-token &optional (errorp t))
-  (cond ((eq reference-token +last-nonexistent-element+)
-	 +last-nonexistent-element+)
-	((and (> (length reference-token) 1)
-	      (char= (char reference-token 0) #\0))
-	 (when errorp
-	   (error 'json-pointer-bad-index-error
-		  :format-control "reference token (~A) should not start with 0 as index"
-		  :format-arguments (list reference-token)))
-	 nil)
-	(t
-	 (handler-case (parse-integer reference-token)
-	   (error ()
-	     (when errorp
-	       (error 'json-pointer-bad-index-error
-		      :format-control "reference token (~A) cannot be read as index"
-		      :format-arguments (list reference-token)))
-	     nil)))))
-
+(defun read-reference-token-as-index (rtoken &optional (errorp t))
+  (etypecase rtoken
+    (integer rtoken)
+    (symbol (assert (eq rtoken +last-nonexistent-element+)
+		    () 'json-pointer-bad-reference-token-error
+		    :format-control "reference token (~A) is not a known symbol"
+		    :format-arguments (list rtoken))
+	    rtoken)
+    (string
+     (cond ((and (> (length rtoken) 1)
+		 (char= (char rtoken 0) #\0)) ; RFC6901 does not allow '0' at the beginning.
+	    (if errorp
+		(error 'json-pointer-bad-reference-token-error
+		       :format-control "reference token (~A) must not start with '0' when used as an index"
+		       :format-arguments (list rtoken))))
+	   (t
+	    (handler-case (parse-integer rtoken)
+	      (error ()
+		(if errorp
+		    (error 'json-pointer-bad-reference-token-error
+			   :format-control "reference token (~A) cannot be read as index"
+			   :format-arguments (list rtoken))))))))))
 
 ;;; Main traversal.
 
@@ -86,6 +85,7 @@
   ;; FIXME: I think this should be error, but `silent' option is required..
   (values nil nil
 	  (thunk-lambda
+	    ;; this is the only point using `json-pointer-not-found-error'
 	    (error 'json-pointer-not-found-error
 		   :format-control "obj ~S is not an array or an object (pointer is ~A)"
 		   :format-arguments (list obj rtoken)))))
@@ -102,8 +102,13 @@
       (call-next-method)))
 
 (defun bad-deleter-error (obj rtoken)
-  (error 'json-pointer-not-found-error
-	 :format-control "object ~S does not have a point to delete, referenced by ~A"
+  (error 'json-pointer-access-error
+	 :format-control "Object ~S's point ~A is not a place to delete"
+	 :format-arguments (list obj rtoken)))
+
+(defun out-of-index-error (obj rtoken)
+  (error 'json-pointer-access-error
+	 :format-control "Object ~S's point ~A is out-of-index"
 	 :format-arguments (list obj rtoken)))
 
 (defun traverse-alist-by-reference-token (alist rtoken set-method next-setter)
@@ -189,7 +194,7 @@
 		       (setf (car this-cons) x)))
 		    (:add
 		     (chained-setter-lambda (x) (list next-setter)
-		       (setf list (make-replaced-list-on-cons list this-cons x))))
+		       (setf list (clone-and-replace-on-cons list this-cons x))))
 		    (:delete
 		     (chained-setter-lambda () (list next-setter)
 		       (setf list (delete-cons list this-cons))))
@@ -199,25 +204,23 @@
 	  (values nil nil
 		  (if set-method
 		      (thunk-lambda
-			(error 'json-pointer-not-found-error
-			       :format-control "Index ~A is out-of-index from ~A"
-			       :format-arguments (list index list)))))))))
+			(out-of-index-error list index))))))))
 
 (defmethod traverse-by-reference-token ((obj list) rtoken set-method next-setter)
-  (if (read-reference-token-as-index rtoken nil)
-      ;; rtoken is ambiguous with index.
-      (cond ((alist-like-p obj)
-	     (traverse-alist-by-reference-token obj rtoken set-method next-setter))
-	    ((and *traverse-consider-plist*
-		  (plist-like-p obj))
-	     (traverse-plist-by-reference-token obj rtoken set-method next-setter))
-	    (t
-	     (traverse-ordinal-list-by-reference-token obj rtoken set-method next-setter)))
-      ;; I assume `rtoken' is not index, so considers alist (or plist).
-      (if (and *traverse-consider-plist*
-	       (plist-like-p obj))
-	  (traverse-plist-by-reference-token obj rtoken set-method next-setter)
-	  (traverse-alist-by-reference-token obj rtoken set-method next-setter))))
+  (if-let ((index (read-reference-token-as-index rtoken nil)))
+    ;; rtoken is ambiguous with index.
+    (cond ((alist-like-p obj)
+	   (traverse-alist-by-reference-token obj rtoken set-method next-setter))
+	  ((and *traverse-consider-plist*
+		(plist-like-p obj))
+	   (traverse-plist-by-reference-token obj rtoken set-method next-setter))
+	  (t
+	   (traverse-ordinal-list-by-reference-token obj index set-method next-setter)))
+    ;; I assume `rtoken' is not index, so considers alist (or plist).
+    (if (and *traverse-consider-plist*
+	     (plist-like-p obj))
+	(traverse-plist-by-reference-token obj rtoken set-method next-setter)
+	(traverse-alist-by-reference-token obj rtoken set-method next-setter))))
 
 (defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.
@@ -337,9 +340,7 @@
 	   (values nil nil
 		   (if set-method
 		       (thunk-lambda
-			 (error 'json-pointer-not-found-error
-				:format-control "Index ~A (pointer ~A) is out-of-index from ~A"
-				:format-arguments (list index rtoken obj))))))
+			 (out-of-index-error obj rtoken)))))
 	  (t
 	   (values (aref obj index) index
 		   (ecase set-method
@@ -356,25 +357,23 @@
 				  :format-control "Delete from array is error (array ~A, index ~A)"
 				  :format-arguments (list obj index))))))))))))
 
-(defun traverse-by-json-pointer (obj parsed-pointer set-method)
+(defun traverse-by-json-pointer (obj pointer set-method)
   "Traverses an object with a parsed json-pointer, and returns three values:
 the referred object, existence (boolean), and a closure can be used as a setter.
 
 `set-method' determines how to *set* into `obj' by the returned setter:
-- `nil' :: Do not set to `obj'.
+- `nil' :: No setters made. (Do not set to `obj'.)
 - `:update' :: Destructively updates into `obj'.
 - `:delete' :: Destructively deletes from `obj'.
-- `:add' :: If changing a list, makes a new list contains the set'ed value. (non-list is still modified).
-- `:remove' :: If deleting form a list, makes new list does not contain the removed value. (non-list is still modified).
+- `:add' :: If changing a list, makes a new list containing the set'ed value. (non-list objs are still modified).
+- `:remove' :: If deleting form a list, makes a new list not containing the removed value. (non-list objs are still modified).
 "
-  (assert (not (member set-method '(:remove :add)))
-	  () "Sorry, not implemented set-method ~A" set-method)
   (let ((value obj)
 	(exists? t)
 	(setter
 	 (if set-method
 	     (lambda (x) (setf obj x)))))
-    (loop for (rtoken . next) on parsed-pointer
+    (loop for (rtoken . next) on pointer
        as this-set-method = (ecase set-method
 			      ((:add :update nil) set-method)
 			      ;; Makes a deleter only at last.

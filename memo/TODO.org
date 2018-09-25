@@ -1,40 +1,45 @@
-TODO: node-jsonpointer interface
+* TODO : node-jsonpointer interface
 - https://github.com/janl/node-jsonpointer
 - https://github.com/alexeykuzmin/jsonpointer.js
 (shadow :get :set)
 (export :get :set)
 
-TODO: json query
+* TODO : json query
 - https://github.com/sagold/json-query
 
+* TODO other libs
+https://github.com/manuelstofer/json-pointer
+https://github.com/WHenderson/json-pointer-rfc6901
 
-深く考えずに condition なげまくるか？
+* TODO 深く考えずに condition なげまくるか？
 
 - get -> 経路がなければ error なげる。値 nil が返されるなら、それは nil があったということ。
 - exists -> 上と同じだが、 muffle-warning する。
-
 - set -> 経路がなければ error なげる。さらに、set時にerrorする可能性がある。
 
-https://github.com/manuelstofer/json-pointer
 
 
-- alist の key に数値があったらどうするのか問題
+* TODO alist の key に数値があったらどうするのか問題
 
 
-- https://github.com/WHenderson/json-pointer-rfc6901
+* TODO setter, deleter は修正後objectを返す(ようにしないと root object 変更時に失敗する)
 
-
-- setter, deleter は修正後objectを返す(ようにしないと root object 変更時に失敗する)
-
-- deleter は setter と統合。
+* TODO deleter は setter と統合。
   deleter に特殊symbolが来たら delete する。
   deleter した結果は、 setter を呼ぶ形で上に投げないといけない。
 
 
 
-- set って 破壊的 update っぽい。
+* TODO set って 破壊的 update っぽい。
   破壊的でない set は、 add という名前にして別にする？
 
-- 一応 setter が複数回呼ばれることを想定しているが、 alist や plist で
+* TODO 一応 setter が複数回呼ばれることを想定しているが、 alist や plist で
   cons を扱っていて、これだと複数回呼んでも意味がなさそう。
   (何を closure に掴ませるかという設定の話になるが)
+
+
+
+* TODO json lib 対応
+ https://sites.google.com/site/sabraonthehill/home/json-libraries
+
+* TODO alist の key を intern する方法
