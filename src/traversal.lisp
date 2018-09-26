@@ -207,50 +207,49 @@
 			(out-of-index-error list index))))))))
 
 (defmethod traverse-by-reference-token ((obj list) rtoken set-method next-setter)
-  (if-let ((index (read-reference-token-as-index rtoken nil)))
-    ;; rtoken is ambiguous with index.
-    (cond ((alist-like-p obj)
-	   (traverse-alist-by-reference-token obj rtoken set-method next-setter))
-	  ((and *traverse-consider-plist*
-		(plist-like-p obj))
-	   (traverse-plist-by-reference-token obj rtoken set-method next-setter))
-	  (t
-	   (traverse-ordinal-list-by-reference-token obj index set-method next-setter)))
-    ;; I assume `rtoken' is not index, so considers alist (or plist).
-    (if (and *traverse-consider-plist*
-	     (plist-like-p obj))
-	(traverse-plist-by-reference-token obj rtoken set-method next-setter)
-	(traverse-alist-by-reference-token obj rtoken set-method next-setter))))
+  ;; `rtoken' may be ambiguous with index.
+  ;; I think how to treat `rtoken' depends on the list structure of `obj'.
+  (cond ((alist-like-p obj)
+	 (traverse-alist-by-reference-token obj rtoken set-method next-setter))
+	((and *traverse-consider-plist*
+	      (plist-like-p obj))
+	 (traverse-plist-by-reference-token obj rtoken set-method next-setter))
+	(t
+	 (traverse-ordinal-list-by-reference-token obj rtoken set-method next-setter))))
 
 (defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.
-  (let* ((index (read-reference-token-as-index rtoken nil))
-	 (nil-method
-	  (cond ((eq index +last-nonexistent-element+)
-		 *traverse-nil-set-to-last-method*)
-		((integerp index)
-		 *traverse-nil-set-to-index-method*)
-		(t
-		 *traverse-nil-set-to-name-method*)))
-	 (setter
-	  (if set-method
-	      (flet ((pick-setter (func)
-		       (nth-value 2 (funcall func obj rtoken set-method next-setter))))
-		(ecase nil-method
-		  (:list
-		   (pick-setter #'traverse-ordinal-list-by-reference-token))
-		  (:alist
-		   (pick-setter #'traverse-alist-by-reference-token))
-		  (:plist
-		   (pick-setter #'traverse-plist-by-reference-token))
-		  (:array
-		   (chained-setter-lambda (x) (obj next-setter)
-		     (setf obj (add-to-array-tail obj x))))
-		  (:error
-		   (thunk-lambda
-		     (error 'json-pointer-access-error
-			    :format-control "Set to nil by index is not supported"))))))))
-    (values nil nil setter)))
+  (values nil nil
+	  (ecase set-method
+	    ((nil) nil)
+	    ((:delete :remove)
+	     (thunk-lambda
+	       (bad-deleter-error obj rtoken)))
+	    ((:update :add)
+	     (let* ((index (read-reference-token-as-index rtoken nil))
+		    (nil-method
+		     (cond ((eq index +last-nonexistent-element+)
+			    *traverse-nil-set-to-last-method*)
+			   ((integerp index)
+			    *traverse-nil-set-to-index-method*)
+			   (t
+			    *traverse-nil-set-to-name-method*))))
+	       (flet ((pick-setter (func)
+			(nth-value 2 (funcall func obj rtoken set-method next-setter))))
+		 (ecase nil-method
+		   (:list
+		    (pick-setter #'traverse-ordinal-list-by-reference-token))
+		   (:alist
+		    (pick-setter #'traverse-alist-by-reference-token))
+		   (:plist
+		    (pick-setter #'traverse-plist-by-reference-token))
+		   (:array
+		    (chained-setter-lambda (x) (obj next-setter)
+		      (setf obj (add-to-array-tail obj x))))
+		   (:error
+		    (thunk-lambda
+		      (error 'json-pointer-access-error
+			     :format-control "Set to nil by index is not supported"))))))))))
 
 (defun traverse-by-reference-token-using-class (obj rtoken set-method next-setter class)
   (if-let ((slot (find rtoken (class-slots class)
@@ -258,7 +257,7 @@
 		       :test #'compare-string-by-readtable-case)))
     (let ((bound? (slot-boundp-using-class class obj slot)))
       (values (if bound?
-		  (slot-value-using-class class obj slot))
+		  (slot-value-using-class class obj slot)) ; FIXME: this NIL may be confusing!
 	      bound?
 	      (ecase set-method
 		((nil) nil)
@@ -292,7 +291,7 @@
 	      ((:add :update) 
 	       (chained-setter-lambda (x) (obj next-setter)
 		 (setf (gethash rtoken obj) x)))
-	      ((:delete  :remove)
+	      ((:delete :remove)
 	       (chained-setter-lambda () (obj next-setter)
 		 (remhash rtoken obj)))))))
 

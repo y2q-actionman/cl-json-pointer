@@ -1,21 +1,64 @@
-* TODO : node-jsonpointer interface
-- https://github.com/janl/node-jsonpointer
-- https://github.com/alexeykuzmin/jsonpointer.js
-(shadow :get :set)
-(export :get :set)
+* TODO json libs 
+
+- [X] https://github.com/janl/node-jsonpointer
+- [X] https://github.com/alexeykuzmin/jsonpointer.js
+
+** TODO json pointer tools
+
+https://github.com/manuelstofer/json-pointer
+
+- [X] get
+- [X] set
+- [X] remove :: =delete=
+- [ ] dict
+- [ ] walk
+- [X] has :: =exists-p=
+- [ ] escape
+- [ ] unescape
+- [X] parse
+- [ ] compile
+- [ ] pointer
+    
+TODO: read test code
+
+** TODO json-pointer-rfc6901
+
+https://github.com/WHenderson/json-pointer-rfc6901
+
+- [X] get
+- [X] set
+- [X] has :: =exists-p=
+- [X] del :: =delete=
+- [ ] escape
+- [ ] escapeFragment
+- [ ] unescape
+- [ ] unescapeFragment
+- [ ] isPointer
+- [ ] isFragment
+- [X] parse
+- [X] parsePointer :: key =:accept-uri-fragment=
+- [X] parseFragment :: key =:accept-uri-fragment=
+- [ ] compile
+- [ ] compilePointer
+- [ ] compileFragment
+- [ ] pointer
+- [ ] smartBind
+
+TODO: read test code
 
 * TODO : json query
+
 - https://github.com/sagold/json-query
 
-* TODO other libs
-https://github.com/manuelstofer/json-pointer
-https://github.com/WHenderson/json-pointer-rfc6901
 
 * TODO 深く考えずに condition なげまくるか？
 
 - get -> 経路がなければ error なげる。値 nil が返されるなら、それは nil があったということ。
 - exists -> 上と同じだが、 muffle-warning する。
 - set -> 経路がなければ error なげる。さらに、set時にerrorする可能性がある。
+
+よく考えたら、 get の時の戻り値は set では使わない。
+なので、何を返すかを完全に set-method で決める？
 
 
 
