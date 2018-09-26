@@ -257,7 +257,7 @@
 		       :test #'compare-string-by-readtable-case)))
     (let ((bound? (slot-boundp-using-class class obj slot)))
       (values (if bound?
-		  (slot-value-using-class class obj slot)) ; FIXME: this NIL may be confusing!
+		  (slot-value-using-class class obj slot))
 	      bound?
 	      (ecase set-method
 		((nil) nil)
@@ -304,14 +304,13 @@
 	    (vector-push x array)) ; uses `vector-push' result as condition.
 	nil)))
 
-(defun add-to-array-tail (array x &key (set-to-last-method
-					*traverse-non-adjustable-array-set-to-last-method*))
+(defun add-to-array-tail (array x)
   ;; `array' may be NIL, because this may be called at traversing NIL.
   (let ((pushed? (if (arrayp array)
 		     (array-try-push array x)
 		     nil)))
     (unless pushed?
-      (ecase set-to-last-method
+      (ecase *traverse-non-adjustable-array-set-to-last-method*
 	(:error
 	 (error 'json-pointer-access-error
 		:format-control "tried to add to the tail of non-adjutable non-fill-pointer array"))
