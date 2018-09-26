@@ -81,6 +81,18 @@
   returns three values: a referred object, existence (boolean), and a
   closure can be used as a setter."))
 
+(defun bad-deleter-error (obj rtoken)
+  (error 'json-pointer-access-error
+	 :format-control "Object ~S's point ~A is not a place to delete"
+	 :format-arguments (list obj rtoken)))
+
+(defun out-of-index-error (obj rtoken)
+  (error 'json-pointer-access-error
+	 :format-control "Object ~S's point ~A is out-of-index"
+	 :format-arguments (list obj rtoken)))
+
+;;; Atoms
+
 (defun error-on-traversing-atom (obj rtoken)
   ;; FIXME: I think this should be error, but `silent' option is required..
   (values nil nil
@@ -101,15 +113,7 @@
       (error-on-traversing-atom obj rtoken)
       (call-next-method)))
 
-(defun bad-deleter-error (obj rtoken)
-  (error 'json-pointer-access-error
-	 :format-control "Object ~S's point ~A is not a place to delete"
-	 :format-arguments (list obj rtoken)))
-
-(defun out-of-index-error (obj rtoken)
-  (error 'json-pointer-access-error
-	 :format-control "Object ~S's point ~A is out-of-index"
-	 :format-arguments (list obj rtoken)))
+;;; List
 
 (defun traverse-alist-by-reference-token (alist rtoken set-method next-setter)
   ;; accepts `nil' as alist.
@@ -251,6 +255,8 @@
 		      (error 'json-pointer-access-error
 			     :format-control "Set to nil by index is not supported"))))))))))
 
+;;; Objects
+
 (defun traverse-by-reference-token-using-class (obj rtoken set-method next-setter class)
   (if-let ((slot (find rtoken (class-slots class)
 		       :key #'slot-definition-name
@@ -281,6 +287,8 @@
 (defmethod traverse-by-reference-token ((obj structure-object) rtoken set-method next-setter)
   (traverse-by-reference-token-using-class obj rtoken set-method next-setter (class-of obj)))
 
+;;; Hash table
+
 (defmethod traverse-by-reference-token ((obj hash-table) rtoken set-method next-setter)
   ;; TODO: use `compare-string-by-readtable-case' (depending on json lib..)
   (multiple-value-bind (value exists?)
@@ -294,6 +302,8 @@
 	      ((:delete :remove)
 	       (chained-setter-lambda () (obj next-setter)
 		 (remhash rtoken obj)))))))
+
+;;; Array
 
 (defun array-try-push (array x)
   (let ((adjustable? (adjustable-array-p array))
@@ -322,38 +332,44 @@
 	 (vector-push x array)))))
   array)
 
-(defmethod traverse-by-reference-token ((obj array) rtoken set-method next-setter)
+(defmethod traverse-by-reference-token ((obj array) (rtoken (eql +last-nonexistent-element+))
+					set-method next-setter)
+  (values nil nil
+	  (ecase set-method
+	    ((nil) nil)
+	    ((:update :add)
+	     (chained-setter-lambda (x) (obj next-setter)
+	       (setf obj (add-to-array-tail obj x))))
+	    ((:delete :remove)
+	     (thunk-lambda
+	       (bad-deleter-error obj rtoken))))))
+
+(defmethod traverse-by-reference-token ((obj array) (rtoken integer) set-method next-setter)
+  (if (not (array-in-bounds-p obj rtoken))
+      (values nil nil
+	      (if set-method
+		  (thunk-lambda
+		    (out-of-index-error obj rtoken))))
+      (values (aref obj rtoken) rtoken
+	      (ecase set-method
+		((nil) nil)
+		((:update :add)
+		 (chained-setter-lambda (x) (obj next-setter)
+		   (setf (aref obj rtoken) x)))
+		((:delete :remove)
+		 (chained-setter-lambda () (obj next-setter)
+		   (ecase *traverse-array-delete-method*
+		     ((nil) (setf (aref obj rtoken) nil))
+		     (:error
+		      (error 'json-pointer-access-error
+			     :format-control "Delete from array is error (array ~A, index ~A)"
+			     :format-arguments (list obj rtoken))))))))))
+
+(defmethod traverse-by-reference-token ((obj array) (rtoken string) set-method next-setter)
   (let ((index (read-reference-token-as-index rtoken)))
-    (cond ((eq index +last-nonexistent-element+)
-	   (values nil nil
-		   (ecase set-method
-		     ((nil) nil)
-		     ((:update :add)
-		      (chained-setter-lambda (x) (obj next-setter)
-			(setf obj (add-to-array-tail obj x))))
-		     ((:delete :remove)
-		      (thunk-lambda
-			(bad-deleter-error obj +last-nonexistent-element+))))))
-	  ((not (array-in-bounds-p obj index))
-	   (values nil nil
-		   (if set-method
-		       (thunk-lambda
-			 (out-of-index-error obj rtoken)))))
-	  (t
-	   (values (aref obj index) index
-		   (ecase set-method
-		     ((nil) nil)
-		     ((:update :add)
-		      (chained-setter-lambda (x) (obj next-setter)
-			(setf (aref obj index) x)))
-		     ((:delete :remove)
-		      (chained-setter-lambda () (obj next-setter)
-			(ecase *traverse-array-delete-method*
-			  ((nil) (setf (aref obj index) nil))
-			  (:error
-			   (error 'json-pointer-access-error
-				  :format-control "Delete from array is error (array ~A, index ~A)"
-				  :format-arguments (list obj index))))))))))))
+    (traverse-by-reference-token obj index set-method next-setter)))
+
+;;; Entry Point
 
 (defun traverse-by-json-pointer (obj pointer set-method)
   "Traverses an object with a parsed json-pointer, and returns three values:
