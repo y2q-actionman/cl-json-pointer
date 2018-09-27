@@ -23,3 +23,19 @@
   (:merge :standard)
   (:dispatch-macro-char #\# #\{ 'parens-reader)
   (:dispatch-macro-char #\# #\[ 'parens-reader))
+
+;;; for multiple json libraries
+
+(defvar *json-readers* nil)
+
+(defvar *current-json-reader* nil)
+
+(defun read-json-string (string)
+  (ensure-function *current-json-reader*)
+  (funcall *current-json-reader* string))
+
+(defun run ()				; test entry point
+  (loop for func in *json-readers*
+     do (format *trace-output* "~&testing on ~A~%" func)
+     always (let ((*current-json-reader* func))
+	      (1am:run))))

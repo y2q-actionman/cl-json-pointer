@@ -59,13 +59,13 @@
 (defclass test-class ()
   ((hoge :initform 'hoge-value)))
 
-(1am:test test-traverse-json-2
+(1am:test test0-traverse-json-2
   (let ((obj (make-instance 'test-class))
 	(ptr "/hoge"))
     (1am:is (equal (get-by-json-pointer obj ptr)
 		   'hoge-value))))
 
-(1am:test test-traverse-json-3 ()
+(1am:test test0-traverse-json-3 ()
   (let ((obj '((:a . 1) (:b . 2))))
     (1am:is (equal (get-by-json-pointer obj "/a") 1))
     (1am:is (equal (get-by-json-pointer obj "/b") 2))

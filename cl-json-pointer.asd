@@ -39,11 +39,14 @@
 	    :components
 	    ((:file "package")
 	     (:file "util")
+	     ;; 
 	     (:file "cl-json")
+	     ;; 
 	     (:file "test0")
 	     (:file "test1")
 	     (:file "test2")
+	     (:file "test3")
 	     (:file "test-top-page"))))
   :perform (asdf:prepare-op :before (o c)
              (set (uiop:find-symbol* :*tests* :1am) '() ))
-  :perform (asdf:test-op (o c) (uiop:symbol-call :1am :run)))
+  :perform (asdf:test-op (o s) (uiop:symbol-call '#:cl-json-pointer/test '#:run)))

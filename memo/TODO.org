@@ -65,20 +65,20 @@ TODO: read test code
 * TODO alist の key に数値があったらどうするのか問題
 
 
-* TODO setter, deleter は修正後objectを返す(ようにしないと root object 変更時に失敗する)
+* DONE setter, deleter は修正後objectを返す
+ようにしないと root object 変更時に失敗する
 
-* TODO deleter は setter と統合。
+* DONE deleter は setter と統合。
   deleter に特殊symbolが来たら delete する。
   deleter した結果は、 setter を呼ぶ形で上に投げないといけない。
 
-
-
-* TODO set って 破壊的 update っぽい。
+* DONE set って 破壊的 update っぽい。
   破壊的でない set は、 add という名前にして別にする？
 
-* TODO 一応 setter が複数回呼ばれることを想定しているが、 alist や plist で
-  cons を扱っていて、これだと複数回呼んでも意味がなさそう。
-  (何を closure に掴ませるかという設定の話になるが)
+* TODO setter は何度呼ばれるか
+一応 setter が複数回呼ばれることを想定しているが、 alist や plist で
+cons を扱っていて、これだと複数回呼んでも意味がなさそう。何を closure
+に掴ませるかという設定の話になるが。
 
 
 
@@ -86,3 +86,8 @@ TODO: read test code
  https://sites.google.com/site/sabraonthehill/home/json-libraries
 
 * TODO alist の key を intern する方法
+
+* TODO user が書いた list を食えるようにする。
+
+- reference token として symbol や int を受け入れる
+- parser が解決済みの値を返すか、それとも今のように曖昧な string として判断を遅延させるか。
