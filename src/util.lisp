@@ -42,6 +42,14 @@ head and the previous cons of the passed cons."
 	(setf (cdr prev-cons) (nthcdr count cons))
 	list)))
 
+(defun extend-list (list n)
+  "Destructively extends `list' to size `n'."
+  ;; TODO: should be more efficient..
+  (let ((len (length list)))
+    (if (<= n len)
+	list
+	(nconc list (make-list (- n len))))))
+
 (defun compare-string-by-readtable-case (a b &key (case (readtable-case *readtable*)))
   ;; TODO: should I use `ignore-errors' for alist (or plist) ?
   (ecase case

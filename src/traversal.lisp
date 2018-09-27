@@ -17,11 +17,12 @@
 - `:array' :: makes a new array contains <value>.
 ")
 
-(defparameter *traverse-nil-set-to-index-method* :error
+(defparameter *traverse-nil-set-to-index-method* :list
   "Determines how to set to NIL by an index.
-- `:error' :: throws an error.
+- `:list' :: makes a new list and set <value> into nth point.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
+- `:error' :: throws an error.
 ")
 
 (defparameter *traverse-nil-set-to-name-method* :alist
@@ -206,9 +207,22 @@
 		     (chained-setter-lambda () (list next-setter)
 		       (setf list (remove-cons list this-cons))))))
 	  (values nil nil
-		  (if set-method
-		      (thunk-lambda
-			(out-of-index-error list index))))))))
+		  (ecase set-method
+		    ((nil) nil)
+		    ((:delete :remove)
+		     (thunk-lambda
+		       (bad-deleter-error list rtoken)))
+		    ;; These cases works, but confusing with `alist-like-p'...
+		    (:update
+		     (chained-setter-lambda (x) (list next-setter)
+		       ;; TODO: should be more efficient..
+		       (setf list (extend-list list (1+ index)))
+		       (setf (nth index list) x)))
+		    (:add
+		     (chained-setter-lambda (x) (list next-setter)
+		       ;; TODO: should be more efficient..
+		       (setf list (extend-list (copy-list list) (1+ index)))
+		       (setf (nth index list) x)))))))))
 
 (defmethod traverse-by-reference-token ((obj list) rtoken set-method next-setter)
   ;; `rtoken' may be ambiguous with index.
