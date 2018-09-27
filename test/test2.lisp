@@ -11,12 +11,12 @@
 ]
   :test 'equal)
 
-(defun test2-array (&aux (obj (read-json-string +test2-array+)))
-  (assert (equal (get-by-json-pointer obj "/0/foo") "bar"))
-  (assert (equal (get-by-json-pointer obj "/0/baz/1") 2))
-  (assert (equalp (get-by-json-pointer obj "/1")
-		  (read-json-string #{ "foo": "foobar" })))
-  t)
+(1am:test test2-array
+  (let ((obj (read-json-string +test2-array+)))
+    (1am:is (equal (get-by-json-pointer obj "/0/foo") "bar"))
+    (1am:is (equal (get-by-json-pointer obj "/0/baz/1") 2))
+    (1am:is (equalp (get-by-json-pointer obj "/1")
+		    (read-json-string #{ "foo": "foobar" })))))
 
 
 (define-constant +test2-undefined+
@@ -26,12 +26,12 @@
   }
   :test 'equal)
 
-(defun test2-undefined (&aux (obj (read-json-string +test2-undefined+)))
-  (assert (not (exists-p-by-json-pointer obj "/oof")))
-  (assert (not (exists-p-by-json-pointer obj "/baz/4")))
-  (assert (not (exists-p-by-json-pointer obj "/foo/bar")))
-  (assert (not (exists-p-by-json-pointer obj "/foo/bar/baz")))
-  t)
+(1am:test test2-undefined
+  (let ((obj (read-json-string +test2-undefined+)))
+    (1am:is (not (exists-p-by-json-pointer obj "/oof")))
+    (1am:is (not (exists-p-by-json-pointer obj "/baz/4")))
+    (1am:is (not (exists-p-by-json-pointer obj "/foo/bar")))
+    (1am:is (not (exists-p-by-json-pointer obj "/foo/bar/baz")))))
 
 
 (define-constant +test2-bad-pointer+
@@ -42,29 +42,27 @@
   }
   :test 'equal)
 
-(defun test2-bad-pointer (&aux (obj (read-json-string +test2-bad-pointer+)))
-  (assert-condition (parse-json-pointer "a"))
-  (assert-condition (get-by-json-pointer obj "/baz/01")) ; My impl does not report error at parsing.
-  ;; (assert-condition (get-by-json-pointer obj "/baz/-")) ; this case is curious. I think this is valid.
-  (assert-condition (parse-json-pointer "-"))
-  t)
+(1am:test test2-bad-pointer
+  (let ((obj (read-json-string +test2-bad-pointer+)))
+    (1am:signals cl-json-pointer:json-pointer-error
+      (parse-json-pointer "a"))
+    (1am:signals cl-json-pointer:json-pointer-error
+      (get-by-json-pointer obj "/baz/01")) ; My impl does not report error at parsing.
+    ;; this case is curious. I think this is valid.
+    #+()
+    (1am:signals cl-json-pointer:json-pointer-error
+      (get-by-json-pointer obj "/baz/-"))
+    (1am:signals cl-json-pointer:json-pointer-error
+      (parse-json-pointer "-"))))
 
 
-(defun test2-valid-pointer ()
-  (assert (null (parse-json-pointer ""))) ; In my impl, this returns nil.
-  (assert (parse-json-pointer "/"))
-  (assert (parse-json-pointer "//"))
-  (assert (parse-json-pointer "/a"))
-  (assert (parse-json-pointer "/0"))
-  (assert (parse-json-pointer "/10"))
-  (assert (parse-json-pointer "/a/0"))
-  (assert (parse-json-pointer "/1/a"))
-  (assert (parse-json-pointer "/-"))
-  t)
-
-
-(defun test2-run ()
-  (and (test2-array)
-       (test2-undefined)
-       (test2-bad-pointer)
-       (test2-valid-pointer)))
+(1am:test test2-valid-pointer ()
+  (1am:is (null (parse-json-pointer ""))) ; In my impl, this returns nil.
+  (1am:is (parse-json-pointer "/"))
+  (1am:is (parse-json-pointer "//"))
+  (1am:is (parse-json-pointer "/a"))
+  (1am:is (parse-json-pointer "/0"))
+  (1am:is (parse-json-pointer "/10"))
+  (1am:is (parse-json-pointer "/a/0"))
+  (1am:is (parse-json-pointer "/1/a"))
+  (1am:is (parse-json-pointer "/-")))

@@ -31,10 +31,5 @@
     (assert (equal(get-by-json-pointer obj "/m~0n") 8)))
   t)
 
-(defun run ()
-  (and
-   (test0-run)
-   (test1-run)
-   (test2-run)
-   (test-top-page)
-   t))
+(1am:test test-top-page-runner
+  (1am:is (test-top-page)))

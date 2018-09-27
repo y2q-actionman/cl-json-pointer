@@ -10,6 +10,7 @@
 		#:slot-value-using-class
 		#:slot-makunbound-using-class)
   (:export
+   #:json-pointer-error
    #:parse-json-pointer
    #:get-by-json-pointer
    #:exists-p-by-json-pointer

@@ -10,32 +10,31 @@
     #{ "foo": 1, "bar": { "baz": 2}, "qux": [3, 4, 5]}
     :test 'equal)
 
-(defun test1-top-page (&aux (obj (read-json-string +test1-top-page+)))
-  (assert (equal (get-by-json-pointer obj "/foo") 1))
-  (assert (equal (get-by-json-pointer obj "/bar/baz") 2))
-  (assert (equal (get-by-json-pointer obj "/qux/0") 3))
-  (assert (equal (get-by-json-pointer obj "/qux/1") 4))
-  (assert (equal (get-by-json-pointer obj "/qux/2") 5))
-  (assert (not (get-by-json-pointer obj "/quo")))
+(1am:test test1-top-page
+  (let ((obj (read-json-string +test1-top-page+)))
+    (1am:is (equal (get-by-json-pointer obj "/foo") 1))
+    (1am:is (equal (get-by-json-pointer obj "/bar/baz") 2))
+    (1am:is (equal (get-by-json-pointer obj "/qux/0") 3))
+    (1am:is (equal (get-by-json-pointer obj "/qux/1") 4))
+    (1am:is (equal (get-by-json-pointer obj "/qux/2") 5))
+    (1am:is (not (get-by-json-pointer obj "/quo")))
 
-  (update-by-json-pointer obj "/foo" 6)
-  (assert (equal (get-by-json-pointer obj "/foo") 6))
-  (update-by-json-pointer  obj "/foo" 7)
-  (assert (equal (get-by-json-pointer obj "/foo") 7))
+    (update-by-json-pointer obj "/foo" 6)
+    (1am:is (equal (get-by-json-pointer obj "/foo") 6))
+    (update-by-json-pointer  obj "/foo" 7)
+    (1am:is (equal (get-by-json-pointer obj "/foo") 7))
 
-  (update-by-json-pointer obj "/qux/-" 6)
-  (assert (equalp (get-by-json-pointer obj "/qux")
-		  #(3 4 5 6)))
-  (update-by-json-pointer obj "/qux/-" 99)
-  (assert (equalp (get-by-json-pointer obj "/qux")
-		  #(3 4 5 6 99)))
+    (update-by-json-pointer obj "/qux/-" 6)
+    (1am:is (equalp (get-by-json-pointer obj "/qux")
+		    #(3 4 5 6)))
+    (update-by-json-pointer obj "/qux/-" 99)
+    (1am:is (equalp (get-by-json-pointer obj "/qux")
+		    #(3 4 5 6 99)))
 
-  (let ((pointer (parse-json-pointer "/foo")))
-    (assert (equal (get-by-json-pointer obj pointer) 7))
-    (update-by-json-pointer obj pointer 999)
-    (assert (equal (get-by-json-pointer obj pointer) 999)))
-
-  t)
+    (let ((pointer (parse-json-pointer "/foo")))
+      (1am:is (equal (get-by-json-pointer obj pointer) 7))
+      (update-by-json-pointer obj pointer 999)
+      (1am:is (equal (get-by-json-pointer obj pointer) 999)))))
 
 ;;; Test cases in test.js
 
@@ -51,58 +50,59 @@
   }
   :test 'equal)
 
-(defun test1-obj (&aux (obj (read-json-string +test1-obj+)))
-  (assert (equal (cljsp:get obj "/a") 1))
-  (assert (equal (cljsp:get obj "/b/c") 2))
-  (assert (equal (cljsp:get obj "/d/e/0/a") 3))
-  (assert (equal (cljsp:get obj "/d/e/1/b") 4))
-  (assert (equal (cljsp:get obj "/d/e/2/c") 5))
+(1am:test test1-obj
+  (let ((obj (read-json-string +test1-obj+)))
+    (1am:is (equal (cljsp:get obj "/a") 1))
+    (1am:is (equal (cljsp:get obj "/b/c") 2))
+    (1am:is (equal (cljsp:get obj "/d/e/0/a") 3))
+    (1am:is (equal (cljsp:get obj "/d/e/1/b") 4))
+    (1am:is (equal (cljsp:get obj "/d/e/2/c") 5))
 
-  (cljsp:update obj "/a" 2)
-  (assert (equal (cljsp:get obj "/a") 2))
-  (cljsp:update obj "/b/c" 3)
-  (assert (equal (cljsp:get obj "/b/c") 3))
-  (cljsp:update obj "/d/e/0/a" 4)
-  (assert (equal (cljsp:get obj "/d/e/0/a") 4))
-  (cljsp:update obj "/d/e/1/b" 5)
-  (assert (equal (cljsp:get obj "/d/e/1/b") 5))
-  (cljsp:update obj "/d/e/2/c" 6)
-  (assert (equal (cljsp:get obj "/d/e/2/c") 6))
+    (cljsp:update obj "/a" 2)
+    (1am:is (equal (cljsp:get obj "/a") 2))
+    (cljsp:update obj "/b/c" 3)
+    (1am:is (equal (cljsp:get obj "/b/c") 3))
+    (cljsp:update obj "/d/e/0/a" 4)
+    (1am:is (equal (cljsp:get obj "/d/e/0/a") 4))
+    (cljsp:update obj "/d/e/1/b" 5)
+    (1am:is (equal (cljsp:get obj "/d/e/1/b") 5))
+    (cljsp:update obj "/d/e/2/c" 6)
+    (1am:is (equal (cljsp:get obj "/d/e/2/c") 6))
 
-  ;; set nested properties
-  (cljsp:update obj "/f/g/h/i" 6)
-  (assert (equal (cljsp:get obj "/f/g/h/i")  6))
+    ;; set nested properties
+    (cljsp:update obj "/f/g/h/i" 6)
+    (1am:is (equal (cljsp:get obj "/f/g/h/i")  6))
 
-  ;; set an array
-  (cljsp:update obj "/f/g/h/foo/-" "test")
-  (let ((arr (cljsp:get obj  "/f/g/h/foo")))
-    ;; TODO: add a way to specify type.
-    ;; (assert (typep arr 'array))
-    (assert (equal (elt arr 0) "test")))
+    ;; set an array
+    (cljsp:update obj "/f/g/h/foo/-" "test")
+    (let ((arr (cljsp:get obj  "/f/g/h/foo")))
+      ;; TODO: add a way to specify type.
+      ;; (1am:is (typep arr 'array))
+      (1am:is (equal (elt arr 0) "test")))
 
-  ;; can set `null` as a value
-  (cljsp:update obj "/f/g/h/foo/0" nil)
-  (assert (null (cljsp:get obj "/f/g/h/foo/0")))
-  (cljsp:update obj "/b/c" nil)
-  (assert (null (cljsp:get obj "/b/c")))
+    ;; can set `null` as a value
+    (cljsp:update obj "/f/g/h/foo/0" nil)
+    (1am:is (null (cljsp:get obj "/f/g/h/foo/0")))
+    (cljsp:update obj "/b/c" nil)
+    (1am:is (null (cljsp:get obj "/b/c")))
 
-  (assert (equalp (cljsp:get obj "") obj))
-  (assert-condition (cljsp:get obj "a"))
-  (assert-condition (cljsp:get obj "a/"))
+    (1am:is (equalp (cljsp:get obj "") obj))
+    (1am:signals cl-json-pointer:json-pointer-error
+      (cljsp:get obj "a"))
+    (1am:signals cl-json-pointer:json-pointer-error
+      (cljsp:get obj "a/"))
 
-  ;; delete operations.
-  ;; (In JS: can unset values with `undefined`)
-  (cljsp:delete obj "/a")
-  (assert (not (cljsp:exists-p obj  "/a")))
-  (cljsp:delete obj "/d/e/1")
-  ;; In my implemented, deleting from list only sets `nil', so the element still exists.
-  (assert (null (cljsp:get obj "/d/e/1")))
-  (assert (cljsp:exists-p obj "/d/e/1"))
+    ;; delete operations.
+    ;; (In JS: can unset values with `undefined`)
+    (cljsp:delete obj "/a")
+    (1am:is (not (cljsp:exists-p obj  "/a")))
+    (cljsp:delete obj "/d/e/1")
+    ;; In my implemented, deleting from list only sets `nil', so the element still exists.
+    (1am:is (null (cljsp:get obj "/d/e/1")))
+    (1am:is (cljsp:exists-p obj "/d/e/1"))
 
-  ;; returns `undefined` when path extends beyond any existing objects
-  (assert (not (cljsp:exists-p obj "/x/y/z")))
-
-  t)
+    ;; returns `undefined` when path extends beyond any existing objects
+    (1am:is (not (cljsp:exists-p obj "/x/y/z")))))
 
 
 (define-constant +test1-complex-keys+
@@ -118,31 +118,29 @@
   }
   :test 'equal)
 
-(defun test1-complex-keys (&aux (obj (read-json-string +test1-complex-keys+)))
-  (assert (equal (cljsp:get obj "/a~1b/c") 1))
-  (assert (equal (cljsp:get obj "/d/e~1f") 2))
-  (assert (equal (cljsp:get obj "/~01") 3))
-  (assert (equal (cljsp:get obj "/01") 4))
-  (assert (equal (cljsp:get obj "/a/b/c") nil))
-  (assert (equal (cljsp:exists-p obj "/a/b/c") nil))
-  (assert (equal (cljsp:get obj "/~1") nil))
-  (assert (equal (cljsp:exists-p obj "/~1") nil))
-
-  t)
+(1am:test test1-complex-keys
+  (let ((obj (read-json-string +test1-complex-keys+)))
+    (1am:is (equal (cljsp:get obj "/a~1b/c") 1))
+    (1am:is (equal (cljsp:get obj "/d/e~1f") 2))
+    (1am:is (equal (cljsp:get obj "/~01") 3))
+    (1am:is (equal (cljsp:get obj "/01") 4))
+    (1am:is (equal (cljsp:get obj "/a/b/c") nil))
+    (1am:is (equal (cljsp:exists-p obj "/a/b/c") nil))
+    (1am:is (equal (cljsp:get obj "/~1") nil))
+    (1am:is (equal (cljsp:exists-p obj "/~1") nil))))
 
 
 (define-constant +test1-ary+
     #[ "zero", "one", "two" ]
   :test 'equal)
 
-(defun test1-ary (&aux (ary (read-json-string +test1-ary+)))
-  ;; draft-ietf-appsawg-json-pointer-08 has special array rules
-  (assert-condition (cljsp:get ary "/01"))
-
-  (cljsp:update ary "/-" "three")
-  (assert (equal (aref ary 3) "three"))
-
-  t)
+(1am:test test1-ary
+  (let ((ary (read-json-string +test1-ary+)))
+    ;; draft-ietf-appsawg-json-pointer-08 has special array rules
+    (1am:signals cl-json-pointer:json-pointer-error
+      (cljsp:get ary "/01"))
+    (cljsp:update ary "/-" "three")
+    (1am:is (equal (aref ary 3) "three"))))
 
 
 (define-constant +test1-example+
@@ -160,49 +158,37 @@
   }
   :test 'equal)
 
-(defun test1-example (&aux (example (read-json-string +test1-example+)))
-  (assert (equal (cljsp:get example "") example))
+(1am:test test1-example
+  (let ((example (read-json-string +test1-example+)))
+    (1am:is (equal (cljsp:get example "") example))
 
-  (let ((ans (cljsp:get example "/foo")))
-    (assert (equal (length ans) 2))
-    (assert (equal (aref ans 0) "bar"))
-    (assert (equal (aref ans 1) "baz")))
+    (let ((ans (cljsp:get example "/foo")))
+      (1am:is (equal (length ans) 2))
+      (1am:is (equal (aref ans 0) "bar"))
+      (1am:is (equal (aref ans 1) "baz")))
 
-  (assert (equal (cljsp:get example "/foo/0") "bar"))
-  (assert (equal (cljsp:get example "/") 0))
-  (assert (equal (cljsp:get example "/a~1b") 1))
-  (assert (equal (cljsp:get example "/c%d") 2))
-  (assert (equal (cljsp:get example "/e^f") 3))
-  (assert (equal (cljsp:get example "/g|h") 4))
-  (assert (equal (cljsp:get example "/i\\j") 5))
-  (assert (equal (cljsp:get example "/k\"l") 6))
-  (assert (equal (cljsp:get example "/ ") 7))
-  (assert (equal (cljsp:get example "/m~0n") 8))
-
-  t)
+    (1am:is (equal (cljsp:get example "/foo/0") "bar"))
+    (1am:is (equal (cljsp:get example "/") 0))
+    (1am:is (equal (cljsp:get example "/a~1b") 1))
+    (1am:is (equal (cljsp:get example "/c%d") 2))
+    (1am:is (equal (cljsp:get example "/e^f") 3))
+    (1am:is (equal (cljsp:get example "/g|h") 4))
+    (1am:is (equal (cljsp:get example "/i\\j") 5))
+    (1am:is (equal (cljsp:get example "/k\"l") 6))
+    (1am:is (equal (cljsp:get example "/ ") 7))
+    (1am:is (equal (cljsp:get example "/m~0n") 8))))
 
 
 (define-constant +test1-a+
     #{"foo": "bar"}
     :test 'equal)
 
-(defun test1-a (&aux (a (read-json-string +test1-a+)))
-  (let ((pointer (cljsp:parse "/foo")))
-    (assert (equal (cljsp:get a pointer) "bar"))
+(1am:test test1-a
+  (let ((a (read-json-string +test1-a+))
+	(pointer (cljsp:parse "/foo")))
+    (1am:is (equal (cljsp:get a pointer) "bar"))
     (cljsp:update a pointer "test")
-    (assert (equal (cljsp:get a pointer) "test"))
+    (1am:is (equal (cljsp:get a pointer) "test"))
 
     (let ((result-obj (read-json-string #{"foo": "test"})))
-      (assert (equalp a result-obj)))
-
-    t))
-
-
-(defun test1-run ()
-  (test1-top-page)
-  (test1-obj)
-  (test1-complex-keys)
-  (test1-ary)
-  (test1-example)
-  (test1-a)
-  t)
+      (1am:is (equalp a result-obj)))))

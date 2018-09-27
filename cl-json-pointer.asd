@@ -30,7 +30,7 @@
 (asdf:defsystem #:cl-json-pointer/test
   :licence "MIT"
   :depends-on (#:cl-json-pointer #:cl-json-pointer/synonyms
-	       #:named-readtables
+	       #:named-readtables #:1am
 	       #:cl-json)		; fixme
   :serial t
   :components
@@ -43,5 +43,7 @@
 	     (:file "test0")
 	     (:file "test1")
 	     (:file "test2")
-	     (:file "test"))))
-  :perform (asdf:test-op (o s) (uiop:symbol-call '#:cl-json-pointer/test '#:run)))
+	     (:file "test-top-page"))))
+  :perform (asdf:prepare-op :before (o c)
+             (set (uiop:find-symbol* :*tests* :1am) '() ))
+  :perform (asdf:test-op (o c) (uiop:symbol-call :1am :run)))

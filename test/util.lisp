@@ -23,9 +23,3 @@
   (:merge :standard)
   (:dispatch-macro-char #\# #\{ 'parens-reader)
   (:dispatch-macro-char #\# #\[ 'parens-reader))
-
-(defmacro assert-condition (&body body)
-  (with-gensyms (ret condition)
-    `(multiple-value-bind (,ret ,condition)
-	 (ignore-errors (progn ,@body))
-       (assert (and (null ,ret) ,condition)))))

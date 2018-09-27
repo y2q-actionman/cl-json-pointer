@@ -4,6 +4,7 @@
   (:use :cl #:cl-json-pointer)
   (:shadow #:get #:set #:delete #:remove)
   (:export
+   #:json-pointer-error
    #:parse #:get #:exists-p #:set #:add #:delete #:remove #:update))
 
 (in-package :cl-json-pointer/synonyms)
