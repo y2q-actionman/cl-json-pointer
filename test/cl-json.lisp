@@ -6,4 +6,7 @@
       (cl-json:decode-json-from-string string))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew 'read-json-string/cl-json-crafted *json-readers*))
+  (pushnew 'read-json-string/cl-json-crafted *json-readers*)
+  ;; I make it default..
+  (unless *current-json-reader*
+    (setf *current-json-reader* 'read-json-string/cl-json-crafted)))
