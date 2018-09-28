@@ -35,7 +35,7 @@
   (funcall *current-json-reader* string))
 
 (define-constant +read-array-type-check+
-  #[ 1 ]
+  "[1]"
   :test #'equal)
 
 (defun read-json-string-sample-array ()

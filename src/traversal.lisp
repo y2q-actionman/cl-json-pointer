@@ -37,12 +37,6 @@
 - `:create' :: makes a new adjustable array contains <value>.
 ")
 
-(defparameter *traverse-array-delete-method* nil
-  "Determines how to delete an value of arrays.
-- `nil' :: fills nil.
-- `:error' :: throws an error.
-")
-
 ;;; Tools
 
 (defmacro chained-setter-lambda ((&rest vars) (target next-function) &body body)
@@ -214,7 +208,7 @@
 	      ((nil) nil)
 	      ((:delete :remove)
 	       (thunk-lambda
-		 (bad-deleter-error list rtoken)))
+		 (bad-deleter-error list index)))
 	      ;; These cases works, but confusing with `alist-like-p'...
 	      (:update
 	       (chained-setter-lambda (x) (list next-setter)
@@ -394,12 +388,8 @@
 		   (setf (aref obj rtoken) x)))
 		((:delete :remove)
 		 (chained-setter-lambda () (obj next-setter)
-		   (ecase *traverse-array-delete-method*
-		     ((nil) (setf (aref obj rtoken) nil))
-		     (:error
-		      (error 'json-pointer-access-error
-			     :format-control "Delete from array is error (array ~A, index ~A)"
-			     :format-arguments (list obj rtoken))))))))))
+		   ;; Fills with NIL. (There is no way to 'remove nil')
+		   (setf (aref obj rtoken) nil)))))))
 
 (defmethod traverse-by-reference-token ((obj array) (rtoken string) set-method next-setter)
   (let ((index (read-reference-token-as-index rtoken)))
