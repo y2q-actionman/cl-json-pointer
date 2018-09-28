@@ -175,65 +175,87 @@
 			  (thunk-lambda
 			    (bad-deleter-error plist rtoken))))))))
 		       
-(defun traverse-ordinal-list-by-reference-token (list rtoken set-method next-setter)
-  (let ((index (read-reference-token-as-index rtoken)))
-    (if (eq index +last-nonexistent-element+)
-	(values nil nil
-		(ecase set-method
-		  ((nil) nil)
-		  (:update
-		   (chained-setter-lambda (x) (list next-setter)
-		     (nconcf list (list x))))
-		  (:add
-		   (chained-setter-lambda (x) (list next-setter)
-		     (appendf list (list x))))
-		  ((:delete :remove)
-		   (thunk-lambda
-		     (bad-deleter-error list rtoken)))))
-	(if-let ((this-cons (nthcdr index list)))
-	  (values (car this-cons) this-cons
-		  (ecase set-method
-		    ((nil) nil)
-		    (:update
-		     (chained-setter-lambda (x) (list next-setter)
-		       (setf (car this-cons) x)))
-		    (:add
-		     (chained-setter-lambda (x) (list next-setter)
-		       (setf list (clone-and-replace-on-cons list this-cons x))))
-		    (:delete
-		     (chained-setter-lambda () (list next-setter)
-		       (setf list (delete-cons list this-cons))))
-		    (:remove
-		     (chained-setter-lambda () (list next-setter)
-		       (setf list (remove-cons list this-cons))))))
-	  (values nil nil
-		  (ecase set-method
-		    ((nil) nil)
-		    ((:delete :remove)
-		     (thunk-lambda
-		       (bad-deleter-error list rtoken)))
-		    ;; These cases works, but confusing with `alist-like-p'...
-		    (:update
-		     (chained-setter-lambda (x) (list next-setter)
-		       ;; TODO: should be more efficient..
-		       (setf list (extend-list list (1+ index)))
-		       (setf (nth index list) x)))
-		    (:add
-		     (chained-setter-lambda (x) (list next-setter)
-		       ;; TODO: should be more efficient..
-		       (setf list (extend-list (copy-list list) (1+ index)))
-		       (setf (nth index list) x)))))))))
+(defgeneric traverse-ordinal-list-by-reference-token (list rtoken set-method next-setter))
 
-(defmethod traverse-by-reference-token ((obj list) rtoken set-method next-setter)
-  ;; `rtoken' may be ambiguous with index.
-  ;; I think how to treat `rtoken' depends on the list structure of `obj'.
-  (cond ((alist-like-p obj)
-	 (traverse-alist-by-reference-token obj rtoken set-method next-setter))
-	((and *traverse-consider-plist*
-	      (plist-like-p obj))
-	 (traverse-plist-by-reference-token obj rtoken set-method next-setter))
-	(t
-	 (traverse-ordinal-list-by-reference-token obj rtoken set-method next-setter))))
+(defmethod traverse-ordinal-list-by-reference-token
+    (list (rtoken (eql +last-nonexistent-element+)) set-method next-setter)
+  (values nil nil
+	  (ecase set-method
+	    ((nil) nil)
+	    (:update
+	     (chained-setter-lambda (x) (list next-setter)
+	       (nconcf list (list x))))
+	    (:add
+	     (chained-setter-lambda (x) (list next-setter)
+	       (appendf list (list x))))
+	    ((:delete :remove)
+	     (thunk-lambda
+	       (bad-deleter-error list rtoken))))))
+	
+(defmethod traverse-ordinal-list-by-reference-token (list (index integer) set-method next-setter)
+  (if-let ((this-cons (nthcdr index list)))
+    (values (car this-cons) this-cons
+	    (ecase set-method
+	      ((nil) nil)
+	      (:update
+	       (chained-setter-lambda (x) (list next-setter)
+		 (setf (car this-cons) x)))
+	      (:add
+	       (chained-setter-lambda (x) (list next-setter)
+		 (setf list (clone-and-replace-on-cons list this-cons x))))
+	      (:delete
+	       (chained-setter-lambda () (list next-setter)
+		 (setf list (delete-cons list this-cons))))
+	      (:remove
+	       (chained-setter-lambda () (list next-setter)
+		 (setf list (remove-cons list this-cons))))))
+    (values nil nil
+	    (ecase set-method
+	      ((nil) nil)
+	      ((:delete :remove)
+	       (thunk-lambda
+		 (bad-deleter-error list rtoken)))
+	      ;; These cases works, but confusing with `alist-like-p'...
+	      (:update
+	       (chained-setter-lambda (x) (list next-setter)
+		 ;; TODO: should be more efficient..
+		 (setf list (extend-list list (1+ index)))
+		 (setf (nth index list) x)))
+	      (:add
+	       (chained-setter-lambda (x) (list next-setter)
+		 ;; TODO: should be more efficient..
+		 (setf list (extend-list (copy-list list) (1+ index)))
+		 (setf (nth index list) x)))))))
+
+(defmethod traverse-ordinal-list-by-reference-token (list (rtoken string) set-method next-setter)
+  (traverse-ordinal-list-by-reference-token list (read-reference-token-as-index rtoken)
+					    set-method next-setter))
+
+(defmethod traverse-by-reference-token ((obj list) (rtoken string) set-method next-setter)
+  (flet ((trvs-alist ()
+	   (traverse-alist-by-reference-token obj rtoken set-method next-setter))
+	 (trvs-plist ()
+	   (traverse-plist-by-reference-token obj rtoken set-method next-setter)))
+    (if-let ((index (read-reference-token-as-index rtoken nil)))
+      ;; `rtoken' is ambiguous with index.
+      (let ((try-alist-result (and (alist-like-p obj)
+				   (ignore-errors
+				     (multiple-value-list (trvs-alist)))))
+	    (try-plist-result (and *traverse-consider-plist*
+				   (plist-like-p obj)
+				   (ignore-errors
+				     (multiple-value-list (trvs-plist))))))
+	(cond (try-alist-result
+	       (values-list try-alist-result))
+	      (try-plist-result
+	       (values-list try-plist-result))
+	      (t
+	       (traverse-ordinal-list-by-reference-token obj index set-method next-setter))))
+      ;; `rtoken' assumed as a field name.
+      (if (and *traverse-consider-plist*
+	       (plist-like-p obj))
+	  (trvs-plist)
+	  (trvs-alist)))))
 
 (defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.

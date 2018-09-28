@@ -20,26 +20,58 @@
     (1am:is (eql (cljsp:get obj "/first-level") :expected)))
   (let ((obj nil))
     (setf (cljsp:get obj "/0/test/0") :expected)
-    (1am:is (arrayp (cljsp:get obj "/")))
-    (1am:is (not (arrayp (cljsp:get obj "/0"))))
-    (1am:is (arrayp (cljsp:get obj "/0/test")))
+    ;; intermediate structures
+    (1am:is (cljsp:exists-p obj ""))
+    (1am:is (cljsp:exists-p obj "/0"))
+    (1am:is (cljsp:exists-p obj "/0/test"))
+    ;; TODO: Types depend on nil-handling method.
+    ;; (1am:is (arrayp (cljsp:get obj "")))
+    ;; (1am:is (not (arrayp (cljsp:get obj "/0"))))
+    ;; (1am:is (arrayp (cljsp:get obj "/0/test")))
     (1am:is (equal (cljsp:get obj "/0/test/0") :expected)))
   (let ((obj (list "foo")))
-    (setf (cljsp:get obj "/-/test/-") "expected")
-    (1am:is (arrayp (cljsp:get obj "/")))
-    (1am:is (length= 2 (cljsp:get obj "/")))
-    (1am:is (not (arrayp (cljsp:get obj "/1"))))
-    (1am:is (arrayp (cljsp:get obj "/1/test")))
+    (setf (cljsp:get obj "/-/test/-") :expected)
+    ;; intermediate structures
+    (1am:is (cljsp:exists-p obj ""))
+    (1am:is (cljsp:exists-p obj "/1"))
+    (1am:is (cljsp:exists-p obj "/1/test"))
+    ;; TODO: Types depend on nil-handling method.
+    ;; (1am:is (arrayp (cljsp:get obj "/")))
+    (1am:is (length= 2 (cljsp:get obj "")))
+    ;; (1am:is (not (arrayp (cljsp:get obj "/1"))))
+    ;; (1am:is (arrayp (cljsp:get obj "/1/test")))
     (1am:is (equal (cljsp:get obj "/1/test/0") :expected))))
 
+(define-constant +test3-delete-array-type-check+
+  #[ 1 ]
+  :test #'equal)
+
 (1am:test test3-delete
-  ;; In my impl, this requires 'list' semantics!
-  (let ((obj (read-json-string +rfc6901-example+))) ; see test0.lisp
-    (cljsp:delete obj "/foo/0")
-    (1am:is (equal (cljsp:get obj "/foo/0") "baz")))
-  (let ((obj (read-json-string +rfc6901-example+)))
-    (cljsp:delete obj "/foo/1")
-    (1am:is (not (cljsp:exists-p obj "/foo/1")))))
+  (etypecase (read-json-string +test3-delete-array-type-check+)
+    (list
+     ;; This is the JS's original test. In my impl, this requires 'list' semantics!
+     (let ((obj (read-json-string +rfc6901-example+))) ; see test0.lisp
+       (1am:is (cljsp:delete obj "/foo/0"))
+       (1am:is (equal (cljsp:get obj "/foo/0") "baz")))
+     (let ((obj (read-json-string +rfc6901-example+)))
+       (1am:is (cljsp:delete obj "/foo/1"))
+       (1am:is (not (cljsp:exists-p obj "/foo/1")))))
+    (array
+     ;; My impl does not shrink arrays.
+     (let* ((obj (read-json-string +rfc6901-example+))
+	    (len (length (cljsp:get obj "/foo")))
+	    (old1 (cljsp:get obj "/foo/1")))
+       (1am:is (cljsp:delete obj "/foo/0"))
+       (1am:is (eq (cljsp:get obj "/foo/0") nil)) ; TODO: FIXME: This is depend on deleting op.
+       (1am:is (eq (cljsp:get obj "/foo/1") old1))
+       (1am:is (length= len (cljsp:get obj "/foo"))))
+     (let* ((obj (read-json-string +rfc6901-example+))
+	    (len (length (cljsp:get obj "/foo")))
+	    (old0 (cljsp:get obj "/foo/0")))
+       (1am:is (cljsp:delete obj "/foo/1"))
+       (1am:is (eq (cljsp:get obj "/foo/0") old0))
+       (1am:is (eq (cljsp:get obj "/foo/1") nil)) ; TODO: FIXME: This is depend on deleting op.
+       (1am:is (length= len (cljsp:get obj "/foo"))))))) 
 
 ;;; nothing for 'dict'
 
@@ -55,7 +87,6 @@
 
 (1am:test test3-has
   (let ((obj (read-json-string +test3-has-obj+)))
-    (pprint obj)
     (1am:is (cljsp:exists-p obj "/bla"))
     (1am:is (cljsp:exists-p obj "/abc"))
     (1am:is (cljsp:exists-p obj "/foo/0/0"))
