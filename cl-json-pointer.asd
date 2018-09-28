@@ -46,6 +46,7 @@
 	     (:file "test1")
 	     (:file "test2")
 	     (:file "test3")
+	     (:file "test4")
 	     (:file "test-top-page"))))
   :perform (asdf:prepare-op :before (o c)
              (set (uiop:find-symbol* :*tests* :1am) '() ))

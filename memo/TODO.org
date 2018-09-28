@@ -21,7 +21,7 @@ https://github.com/manuelstofer/json-pointer
     
 TODO: read test code
 
-** TODO json-pointer-rfc6901
+** DONE json-pointer-rfc6901
 
 https://github.com/WHenderson/json-pointer-rfc6901
 
@@ -44,7 +44,7 @@ https://github.com/WHenderson/json-pointer-rfc6901
 - [ ] pointer
 - [ ] smartBind
 
-TODO: read test code
+DONE: read test code
 
 * TODO : json query
 
@@ -91,3 +91,5 @@ cons を扱っていて、これだと複数回呼んでも意味がなさそう
 
 - reference token として symbol や int を受け入れる
 - parser が解決済みの値を返すか、それとも今のように曖昧な string として判断を遅延させるか。
+* TODO deletef 的なものを足す。
+  test4 で使える。

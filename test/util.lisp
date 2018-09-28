@@ -34,6 +34,14 @@
   (ensure-function *current-json-reader*)
   (funcall *current-json-reader* string))
 
+(define-constant +read-array-type-check+
+  #[ 1 ]
+  :test #'equal)
+
+(defun read-json-string-sample-array ()
+  (read-json-string +read-array-type-check+))
+
+
 (defun run ()				; test entry point
   (loop for func in *json-readers*
      do (format *trace-output* "~&testing on ~A~%" func)

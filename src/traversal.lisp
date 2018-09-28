@@ -422,7 +422,7 @@ the referred object, existence (boolean), and a closure can be used as a setter.
 	(exists? t)
 	(setter
 	 (if set-method
-	     (lambda (x) (setf obj x)))))
+	     (lambda (&optional x) (setf obj x)))))
     (loop for (rtoken . next) on pointer
        as this-set-method = (ecase set-method
 			      ((:add :update nil) set-method)
