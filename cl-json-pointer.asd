@@ -31,7 +31,12 @@
   :licence "MIT"
   :depends-on (#:cl-json-pointer #:cl-json-pointer/synonyms
 	       #:named-readtables #:1am
-	       #:cl-json)		; fixme
+	       #:cl-json #:st-json #:yason #:jsown
+	       #:jonathan ; I surprised this lib has 8 dependencies.
+	       #:json-streams #:com.gigamonkeys.json
+	       ;; #:define-json-expander
+	       ;; #:json-mop
+	       )
   :serial t
   :components
   ((:module "test"

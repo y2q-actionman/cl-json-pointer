@@ -1,9 +1,9 @@
-* TODO json libs 
+* DONE json libs 
 
 - [X] https://github.com/janl/node-jsonpointer
 - [X] https://github.com/alexeykuzmin/jsonpointer.js
 
-** TODO json pointer tools
+** DONE json pointer tools
 
 https://github.com/manuelstofer/json-pointer
 
@@ -19,7 +19,7 @@ https://github.com/manuelstofer/json-pointer
 - [ ] compile
 - [ ] pointer
     
-TODO: read test code
+- read test code
 
 ** DONE json-pointer-rfc6901
 
@@ -44,7 +44,7 @@ https://github.com/WHenderson/json-pointer-rfc6901
 - [ ] pointer
 - [ ] smartBind
 
-DONE: read test code
+- read test code
 
 * TODO : json query
 
@@ -82,7 +82,7 @@ cons を扱っていて、これだと複数回呼んでも意味がなさそう
 
 
 
-* TODO json lib 対応
+* TODO common lisp json lib 対応
  https://sites.google.com/site/sabraonthehill/home/json-libraries
 
 * TODO alist の key を intern する方法
@@ -93,3 +93,6 @@ cons を扱っていて、これだと複数回呼んでも意味がなさそう
 - parser が解決済みの値を返すか、それとも今のように曖昧な string として判断を遅延させるか。
 * TODO deletef 的なものを足す。
   test4 で使える。
+
+* TODO access を使う。
+https://github.com/AccelerationNet/access/
