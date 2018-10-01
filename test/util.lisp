@@ -29,21 +29,31 @@
 (defvar *json-readers* nil)
 
 (defvar *current-json-reader* nil)
+(defvar *current-json-reader-array-type* nil)
 
 (defun read-json-string (string)
-  (ensure-function *current-json-reader*)
+  (check-type *current-json-reader* (or symbol function))
   (funcall *current-json-reader* string))
 
 (define-constant +read-array-type-check+
   "[1]"
   :test #'equal)
 
-(defun read-json-string-sample-array ()
-  (read-json-string +read-array-type-check+))
-
+(defmacro current-json-reader-array-etypecase (&body clauses)
+  (loop with current-type = (gensym)
+     for (type . body) in clauses
+     collect `((subtypep ,current-type ',type) ,@body) into ex-clauses
+     finally
+       (return `(let ((,current-type
+		       (type-of (read-json-string +read-array-type-check+))))
+		  (cond ,@ex-clauses
+			(t
+			 (error "Unexpected type ~A for 'current-json-array-reader-etypecase'"
+				,current-type)))))))
 
 (defun run ()				; test entry point
   (loop for func in *json-readers*
      do (format *trace-output* "~&testing on ~A~%" func)
-     always (let ((*current-json-reader* func))
+     always (let ((*current-json-reader* func)
+		  (*current-json-reader-array-type* (read-json-string-array-type)))
 	      (1am:run))))

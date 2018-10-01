@@ -26,10 +26,14 @@
 
     (update-by-json-pointer obj "/qux/-" 6)
     (1am:is (equalp (get-by-json-pointer obj "/qux")
-		    #(3 4 5 6)))
+		    (current-json-reader-array-etypecase
+		      (list '(3 4 5 6))
+		      (array #(3 4 5 6)))))
     (update-by-json-pointer obj "/qux/-" 99)
     (1am:is (equalp (get-by-json-pointer obj "/qux")
-		    #(3 4 5 6 99)))
+		    (current-json-reader-array-etypecase
+		      (list '(3 4 5 6 99))
+		      (array #(3 4 5 6 99)))))
 
     (let ((pointer (parse-json-pointer "/foo")))
       (1am:is (equal (get-by-json-pointer obj pointer) 7))
@@ -97,9 +101,18 @@
     (cljsp:delete obj "/a")
     (1am:is (not (cljsp:exists-p obj  "/a")))
     (cljsp:delete obj "/d/e/1")
-    ;; In my implemented, deleting from list only sets `nil', so the element still exists.
-    (1am:is (null (cljsp:get obj "/d/e/1")))
-    (1am:is (cljsp:exists-p obj "/d/e/1"))
+    (current-json-reader-array-etypecase
+      (list
+       (1am:is (cljsp:exists-p obj "/d/e/0"))
+       (1am:is (cljsp:exists-p obj "/d/e/0/a"))
+       (1am:is (cljsp:exists-p obj "/d/e/1"))
+       (1am:is (not (cljsp:exists-p obj "/d/e/1/b")))
+       (1am:is (cljsp:exists-p obj "/d/e/1/c"))
+       (1am:is (not (cljsp:exists-p obj "/d/e/2"))))
+      (array
+       ;; In my implementation, deleting from array only sets `nil', so the element still exists.
+       (1am:is (null (cljsp:get obj "/d/e/1")))
+       (1am:is (cljsp:exists-p obj "/d/e/1"))))
 
     ;; returns `undefined` when path extends beyond any existing objects
     (1am:is (not (cljsp:exists-p obj "/x/y/z")))))
@@ -140,7 +153,7 @@
     (1am:signals cl-json-pointer:json-pointer-error
       (cljsp:get ary "/01"))
     (cljsp:update ary "/-" "three")
-    (1am:is (equal (aref ary 3) "three"))))
+    (1am:is (equal (elt ary 3) "three"))))
 
 
 (define-constant +test1-example+
@@ -164,8 +177,8 @@
 
     (let ((ans (cljsp:get example "/foo")))
       (1am:is (equal (length ans) 2))
-      (1am:is (equal (aref ans 0) "bar"))
-      (1am:is (equal (aref ans 1) "baz")))
+      (1am:is (equal (elt ans 0) "bar"))
+      (1am:is (equal (elt ans 1) "baz")))
 
     (1am:is (equal (cljsp:get example "/foo/0") "bar"))
     (1am:is (equal (cljsp:get example "/") 0))

@@ -54,14 +54,16 @@
 	    (if errorp
 		(error 'json-pointer-bad-reference-token-error
 		       :format-control "reference token (~A) must not start with '0' when used as an index"
-		       :format-arguments (list rtoken))))
+		       :format-arguments (list rtoken))
+		(values nil :badly-formatted-index)))
 	   (t
 	    (handler-case (parse-integer rtoken)
 	      (error ()
 		(if errorp
 		    (error 'json-pointer-bad-reference-token-error
 			   :format-control "reference token (~A) cannot be read as index"
-			   :format-arguments (list rtoken))))))))))
+			   :format-arguments (list rtoken))
+		    (values nil :not-a-number)))))))))
 
 ;;; Main traversal.
 
@@ -224,26 +226,36 @@
 	   (traverse-alist-by-reference-token obj rtoken set-method next-setter))
 	 (trvs-plist ()
 	   (traverse-plist-by-reference-token obj rtoken set-method next-setter)))
-    (if-let ((index (read-reference-token-as-index rtoken nil)))
-      ;; `rtoken' is ambiguous with index.
-      (let ((try-alist-result (and (alist-like-p obj)
-				   (ignore-errors
-				     (multiple-value-list (trvs-alist)))))
-	    (try-plist-result (and *traverse-consider-plist*
-				   (plist-like-p obj)
-				   (ignore-errors
-				     (multiple-value-list (trvs-plist))))))
-	(cond (try-alist-result
-	       (values-list try-alist-result))
-	      (try-plist-result
-	       (values-list try-plist-result))
-	      (t
-	       (traverse-ordinal-list-by-reference-token obj index set-method next-setter))))
-      ;; `rtoken' assumed as a field name.
-      (if (and *traverse-consider-plist*
-	       (plist-like-p obj))
-	  (trvs-plist)
-	  (trvs-alist)))))
+    (multiple-value-bind (index bad-index-reason)
+	(read-reference-token-as-index rtoken nil)
+      (if index
+	  ;; `rtoken' is ambiguous with index.
+	  (let ((try-alist-result (and (alist-like-p obj)
+				       (ignore-errors
+					 (multiple-value-list (trvs-alist)))))
+		(try-plist-result (and *traverse-consider-plist*
+				       (plist-like-p obj)
+				       (ignore-errors
+					 (multiple-value-list (trvs-plist))))))
+	    (cond ((first try-alist-result)
+		   (values-list try-alist-result))
+		  ((first try-plist-result)
+		   (values-list try-plist-result))
+		  (t
+		   (traverse-ordinal-list-by-reference-token obj index set-method next-setter))))
+	  ;; `rtoken' assumed as a field name.
+	  (progn
+	    (when (and (eq bad-index-reason :badly-formatted-index)
+		       (not (alist-like-p obj))
+		       (not (and *traverse-consider-plist*
+				 (plist-like-p obj))))
+	      ;; TODO: catch the exception directly
+	      (error 'json-pointer-bad-reference-token-error
+		     :format-control "bad format for accesing "))
+	    (if (and *traverse-consider-plist*
+		     (plist-like-p obj))
+		(trvs-plist)
+		(trvs-alist)))))))
 
 (defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.
