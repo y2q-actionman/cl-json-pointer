@@ -313,8 +313,13 @@
 		 (chained-setter-lambda (x) (next-setter obj)
 		   (setf (slot-value-using-class class obj slot) x)))
 		((:remove :delete)
-		 (chained-setter-lambda () (next-setter obj)
-		   (slot-makunbound-using-class class obj slot))))))
+		 (if bound?
+		     (chained-setter-lambda () (next-setter obj)
+		       (slot-makunbound-using-class class obj slot))
+		     (thunk-lambda
+		       (error 'json-pointer-access-error
+			      :format-control "object ~A's '~A' slot is unbound"
+			      :format-arguments (list obj rtoken))))))))
     (values nil nil
 	    (if set-method
 		(thunk-lambda
@@ -342,8 +347,13 @@
 	       (chained-setter-lambda (x) (next-setter obj)
 		 (setf (gethash rtoken obj) x)))
 	      ((:delete :remove)
-	       (chained-setter-lambda () (next-setter obj)
-		 (remhash rtoken obj)))))))
+	       (if exists?
+		   (chained-setter-lambda () (next-setter obj)
+		     (remhash rtoken obj))
+		   (thunk-lambda
+		     (error 'json-pointer-access-error
+			    :format-control "Hash-table ~A does not have ~A key"
+			    :format-arguments (list obj rtoken)))))))))
 
 ;;; Array
 

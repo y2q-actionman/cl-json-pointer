@@ -36,9 +36,10 @@
   :licence "MIT"
   :depends-on (#:cl-json-pointer #:cl-json-pointer/synonyms
 	       #:named-readtables #:1am
-	       #:cl-json #:st-json
+	       ;; json libs
+	       #:cl-json #:st-json #:yason
 	       ;; TODO
-	       ;; #:yason #:jsown
+	       ;;  #:jsown
 	       ;; #:jonathan ; I surprised this lib has 8 dependencies.
 	       ;; #:json-streams #:com.gigamonkeys.json
 	       ;; Not supported

@@ -51,7 +51,7 @@ https://github.com/WHenderson/json-pointer-rfc6901
 
 - [X] cl-json
 - [X] st-json
-- [ ] yason
+- [X] yason
 - [ ] jsown
 - [ ] jonathan
 - [ ] json-streams
