@@ -1,5 +1,9 @@
 (in-package :cl-user)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-package :st-json)
+    (pushnew :cl-json-pointer/st-json-support *features*)))
+
 (asdf:defsystem #:cl-json-pointer
   :licence "MIT"
   :depends-on (#:alexandria #:closer-mop)
@@ -15,7 +19,8 @@
 	     (:file "condition")
 	     (:file "parser")
 	     (:file "traversal")
-	     (:file "interface"))))
+	     (:file "interface")
+	     (:file "st-json-support" :if-feature :cl-json-pointer/st-json-support))))
   :in-order-to ((asdf:test-op (asdf:test-op #:cl-json-pointer/test))))
 
 (asdf:defsystem #:cl-json-pointer/synonyms
@@ -31,11 +36,13 @@
   :licence "MIT"
   :depends-on (#:cl-json-pointer #:cl-json-pointer/synonyms
 	       #:named-readtables #:1am
-	       #:cl-json #:st-json #:yason #:jsown
-	       #:jonathan ; I surprised this lib has 8 dependencies.
-	       #:json-streams #:com.gigamonkeys.json
-	       ;; #:define-json-expander
-	       ;; #:json-mop
+	       #:cl-json #:st-json
+	       ;; TODO
+	       ;; #:yason #:jsown
+	       ;; #:jonathan ; I surprised this lib has 8 dependencies.
+	       ;; #:json-streams #:com.gigamonkeys.json
+	       ;; Not supported
+	       ;; #:define-json-expander #:json-mop
 	       )
   :serial t
   :components
@@ -45,7 +52,7 @@
 	    ((:file "package")
 	     (:file "util")
 	     ;; 
-	     (:file "cl-json")
+	     (:file "reader")
 	     ;; 
 	     (:file "test0")
 	     (:file "test1")

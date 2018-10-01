@@ -26,12 +26,12 @@
 
     (update-by-json-pointer obj "/qux/-" 6)
     (1am:is (equalp (get-by-json-pointer obj "/qux")
-		    (current-json-reader-array-etypecase
+		    (current-json-reader-etypecase (*current-array-type*)
 		      (list '(3 4 5 6))
 		      (array #(3 4 5 6)))))
     (update-by-json-pointer obj "/qux/-" 99)
     (1am:is (equalp (get-by-json-pointer obj "/qux")
-		    (current-json-reader-array-etypecase
+		    (current-json-reader-etypecase (*current-array-type*)
 		      (list '(3 4 5 6 99))
 		      (array #(3 4 5 6 99)))))
 
@@ -101,7 +101,7 @@
     (cljsp:delete obj "/a")
     (1am:is (not (cljsp:exists-p obj  "/a")))
     (cljsp:delete obj "/d/e/1")
-    (current-json-reader-array-etypecase
+    (current-json-reader-etypecase (*current-array-type*)
       (list
        (1am:is (cljsp:exists-p obj "/d/e/0"))
        (1am:is (cljsp:exists-p obj "/d/e/0/a"))

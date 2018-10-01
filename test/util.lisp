@@ -29,31 +29,43 @@
 (defvar *json-readers* nil)
 
 (defvar *current-json-reader* nil)
-(defvar *current-json-reader-array-type* nil)
+(defvar *current-array-type* nil)
+(defvar *current-object-type* nil)
 
 (defun read-json-string (string)
   (check-type *current-json-reader* (or symbol function))
   (funcall *current-json-reader* string))
 
-(define-constant +read-array-type-check+
+(define-constant +array-type-check+
   "[1]"
   :test #'equal)
 
-(defmacro current-json-reader-array-etypecase (&body clauses)
+(define-constant +object-type-check+
+  "{\"a\": 1}"
+  :test #'equal)
+
+(defmacro current-json-reader-etypecase ((type-var) &body clauses)
   (loop with current-type = (gensym)
      for (type . body) in clauses
      collect `((subtypep ,current-type ',type) ,@body) into ex-clauses
      finally
-       (return `(let ((,current-type *current-json-reader-array-type*))
+       (return `(let ((,current-type ,type-var))
 		  (cond ,@ex-clauses
 			(t
-			 (error "Unexpected type ~A for 'current-json-array-reader-etypecase'"
+			 (error "Unexpected type ~A for 'current-json-reader-etypecase'"
 				,current-type)))))))
 
-(defun run ()				; test entry point
-  (loop for func in *json-readers*
-     do (format *trace-output* "~&testing on ~A~%" func)
-     always (let* ((*current-json-reader* func)
-		   (*current-json-reader-array-type*
-		    (type-of (read-json-string +read-array-type-check+))))
-	      (1am:run))))
+(defmacro with-current-json-reader ((func) &body body)
+  `(let* ((*current-json-reader* ,func)
+	  (*current-array-type* (type-of (read-json-string +array-type-check+)))
+	  (*current-object-type* (type-of (read-json-string +object-type-check+))))
+     ,@body))
+
+(defun run (&optional (readers *json-readers*))	; test entry point
+  (loop for func in readers
+     do (with-current-json-reader (func)
+	  (format t "~&testing on ~A:~A~& (JSON array = ~A, JSON object = ~A)~%"
+		  (package-name (symbol-package *current-json-reader*))
+		  *current-json-reader*
+		  *current-array-type* *current-object-type*)
+	  (1am:run))))

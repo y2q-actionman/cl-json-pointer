@@ -43,7 +43,7 @@
     (1am:is (equal (cljsp:get obj "/1/test/0") :expected))))
 
 (1am:test test3-delete
-  (current-json-reader-array-etypecase
+  (current-json-reader-etypecase (*current-array-type*)
     (list
      ;; This is the JS's original test. In my impl, this requires 'list' semantics!
      (let ((obj (read-json-string +rfc6901-example+))) ; see test0.lisp
