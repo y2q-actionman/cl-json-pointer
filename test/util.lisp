@@ -44,8 +44,7 @@
      for (type . body) in clauses
      collect `((subtypep ,current-type ',type) ,@body) into ex-clauses
      finally
-       (return `(let ((,current-type
-		       (type-of (read-json-string +read-array-type-check+))))
+       (return `(let ((,current-type *current-json-reader-array-type*))
 		  (cond ,@ex-clauses
 			(t
 			 (error "Unexpected type ~A for 'current-json-array-reader-etypecase'"
@@ -54,6 +53,7 @@
 (defun run ()				; test entry point
   (loop for func in *json-readers*
      do (format *trace-output* "~&testing on ~A~%" func)
-     always (let ((*current-json-reader* func)
-		  (*current-json-reader-array-type* (read-json-string-array-type)))
+     always (let* ((*current-json-reader* func)
+		   (*current-json-reader-array-type*
+		    (type-of (read-json-string +read-array-type-check+))))
 	      (1am:run))))

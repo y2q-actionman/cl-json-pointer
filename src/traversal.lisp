@@ -221,6 +221,10 @@
   (traverse-ordinal-list-by-reference-token list (read-reference-token-as-index rtoken)
 					    set-method next-setter))
 
+(defmethod traverse-by-reference-token
+    ((obj list) (rtoken (eql +last-nonexistent-element+)) set-method next-setter)
+  (traverse-ordinal-list-by-reference-token obj rtoken set-method next-setter))
+
 (defmethod traverse-by-reference-token ((obj list) (rtoken string) set-method next-setter)
   (flet ((trvs-alist ()
 	   (traverse-alist-by-reference-token obj rtoken set-method next-setter))
