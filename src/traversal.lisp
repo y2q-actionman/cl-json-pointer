@@ -33,10 +33,12 @@
 
 ;;; Tools
 
-(defmacro chained-setter-lambda ((&rest vars) (target next-function) &body body)
+(defmacro chained-setter-lambda
+    ((&rest vars) (next-function &optional (next-arg nil na-supplied-p)) &body body)
   `(lambda (,@vars)
      (funcall ,next-function
-	      (progn ,@body ,target))))
+	      (progn ,@body
+		     ,@(if na-supplied-p `(,next-arg) ())))))
 
 ;;; Reference Token
 
@@ -113,23 +115,23 @@
 	    (ecase set-method
 	      ((nil) nil)
 	      (:update
-	       (chained-setter-lambda (x) (alist next-setter)
+	       (chained-setter-lambda (x) (next-setter alist)
 		 (setf (cdr entry) x)))
 	      (:add
-	       (chained-setter-lambda (x) (alist next-setter)
-		 (push (cons rtoken x) alist)))
+	       (chained-setter-lambda (x) (next-setter)
+		 (acons rtoken x alist)))
 	      (:delete
-	       (chained-setter-lambda () (alist next-setter)
-		 (deletef alist entry)))
+	       (chained-setter-lambda () (next-setter)
+		 (delete entry alist)))
 	      (:remove
-	       (chained-setter-lambda () (alist next-setter)
-		 (removef alist entry)))))
+	       (chained-setter-lambda () (next-setter)
+		 (remove entry alist)))))
     (values nil nil
 	    (ecase set-method
 	      ((nil) nil)
 	      ((:add :update)
-	       (chained-setter-lambda (x) (alist next-setter)
-		 (push (cons rtoken x) alist)))
+	       (chained-setter-lambda (x) (next-setter)
+		 (acons rtoken x alist)))
 	      ((:delete :remove)
 	       (thunk-lambda
 		 (bad-deleter-error alist rtoken)))))))
@@ -143,24 +145,24 @@
 		    (ecase set-method
 		      ((nil) nil)
 		      (:update
-		       (chained-setter-lambda (x) (plist next-setter)
+		       (chained-setter-lambda (x) (next-setter plist)
 			 (setf (cadr plist-head) x)))
 		      (:add
-		       (chained-setter-lambda (x) (plist next-setter)
-			 (setf plist (list* rtoken x plist))))
+		       (chained-setter-lambda (x) (next-setter)
+			 (list* rtoken x plist)))
 		      (:delete
-		       (chained-setter-lambda () (plist next-setter)
-			 (setf plist (delete-cons plist plist-head 2))))
+		       (chained-setter-lambda () (next-setter)
+			 (delete-cons plist plist-head 2)))
 		      (:remove
-		       (chained-setter-lambda () (plist next-setter)
-			 (setf plist (remove-cons plist plist-head 2))))))
+		       (chained-setter-lambda () (next-setter)
+			 (remove-cons plist plist-head 2)))))
      finally
        (return (values nil nil
 		       (ecase set-method
 			 ((nil) nil)
 			 ((:update :add)
-			  (chained-setter-lambda (x) (plist next-setter)
-			    (setf plist (list* rtoken x plist))))
+			  (chained-setter-lambda (x) (next-setter)
+			    (list* rtoken x plist)))
 			 ((:delete :remove)
 			  (thunk-lambda
 			    (bad-deleter-error plist rtoken))))))))
@@ -173,11 +175,11 @@
 	  (ecase set-method
 	    ((nil) nil)
 	    (:update
-	     (chained-setter-lambda (x) (list next-setter)
-	       (nconcf list (list x))))
+	     (chained-setter-lambda (x) (next-setter)
+	       (nconc list (list x))))
 	    (:add
-	     (chained-setter-lambda (x) (list next-setter)
-	       (appendf list (list x))))
+	     (chained-setter-lambda (x) (next-setter)
+	       (append list (list x))))
 	    ((:delete :remove)
 	     (thunk-lambda
 	       (bad-deleter-error list rtoken))))))
@@ -188,17 +190,17 @@
 	    (ecase set-method
 	      ((nil) nil)
 	      (:update
-	       (chained-setter-lambda (x) (list next-setter)
+	       (chained-setter-lambda (x) (next-setter list)
 		 (setf (car this-cons) x)))
 	      (:add
-	       (chained-setter-lambda (x) (list next-setter)
-		 (setf list (clone-and-replace-on-cons list this-cons x))))
+	       (chained-setter-lambda (x) (next-setter)
+		 (clone-and-replace-on-cons list this-cons x)))
 	      (:delete
-	       (chained-setter-lambda () (list next-setter)
-		 (setf list (delete-cons list this-cons))))
+	       (chained-setter-lambda () (next-setter)
+		 (delete-cons list this-cons)))
 	      (:remove
-	       (chained-setter-lambda () (list next-setter)
-		 (setf list (remove-cons list this-cons))))))
+	       (chained-setter-lambda () (next-setter)
+		 (remove-cons list this-cons)))))
     (values nil nil
 	    (ecase set-method
 	      ((nil) nil)
@@ -207,12 +209,12 @@
 		 (bad-deleter-error list index)))
 	      ;; These cases works, but confusing with `alist-like-p'...
 	      (:update
-	       (chained-setter-lambda (x) (list next-setter)
+	       (chained-setter-lambda (x) (next-setter list)
 		 ;; TODO: should be more efficient..
 		 (setf list (extend-list list (1+ index)))
 		 (setf (nth index list) x)))
 	      (:add
-	       (chained-setter-lambda (x) (list next-setter)
+	       (chained-setter-lambda (x) (next-setter list)
 		 ;; TODO: should be more efficient..
 		 (setf list (extend-list (copy-list list) (1+ index)))
 		 (setf (nth index list) x)))))))
@@ -288,9 +290,8 @@
 		   (:plist
 		    (pick-setter #'traverse-plist-by-reference-token))
 		   (:array
-		    (chained-setter-lambda (x) (obj next-setter)
-		      (setf obj (extend-array #() 1 0))
-		      (vector-push x obj)))
+		    (chained-setter-lambda (x) (next-setter)
+		      (make-array 1 :adjustable t :initial-element x :fill-pointer t)))
 		   (:error
 		    (thunk-lambda
 		      (error 'json-pointer-access-error
@@ -309,10 +310,10 @@
 	      (ecase set-method
 		((nil) nil)
 		((:update :add)
-		 (chained-setter-lambda (x) (obj next-setter)
+		 (chained-setter-lambda (x) (next-setter obj)
 		   (setf (slot-value-using-class class obj slot) x)))
 		((:remove :delete)
-		 (chained-setter-lambda () (obj next-setter)
+		 (chained-setter-lambda () (next-setter obj)
 		   (slot-makunbound-using-class class obj slot))))))
     (values nil nil
 	    (if set-method
@@ -338,10 +339,10 @@
 	    (ecase set-method
 	      ((nil) nil)
 	      ((:add :update) 
-	       (chained-setter-lambda (x) (obj next-setter)
+	       (chained-setter-lambda (x) (next-setter obj)
 		 (setf (gethash rtoken obj) x)))
 	      ((:delete :remove)
-	       (chained-setter-lambda () (obj next-setter)
+	       (chained-setter-lambda () (next-setter obj)
 		 (remhash rtoken obj)))))))
 
 ;;; Array
@@ -352,7 +353,7 @@
 	  (ecase set-method
 	    ((nil) nil)
 	    ((:update :add)
-	     (chained-setter-lambda (x) (obj next-setter)
+	     (chained-setter-lambda (x) (next-setter obj)
 	       (unless (array-try-push obj x)
 		 ;; Automatically extends it.
 		 (let ((old-length (length obj)))
@@ -368,7 +369,7 @@
 	      (ecase set-method
 		((nil) nil)
 		((:update :add)
-		 (chained-setter-lambda (x) (obj next-setter)
+		 (chained-setter-lambda (x) (next-setter obj)
 		   ;; Automatically extends it.
 		   (setf obj (extend-array obj (1+ rtoken) t)
 			 (aref obj rtoken) x)))
@@ -379,10 +380,10 @@
 	      (ecase set-method
 		((nil) nil)
 		((:update :add)
-		 (chained-setter-lambda (x) (obj next-setter)
+		 (chained-setter-lambda (x) (next-setter obj)
 		   (setf (aref obj rtoken) x)))
 		((:delete :remove)
-		 (chained-setter-lambda () (obj next-setter)
+		 (chained-setter-lambda () (next-setter obj)
 		   ;; Fills with NIL. (There is no way to 'remove nil')
 		   (setf (aref obj rtoken) nil)))))))
 
