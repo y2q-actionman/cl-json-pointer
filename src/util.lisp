@@ -1,5 +1,7 @@
 (in-package :cl-json-pointer)
 
+;;; Lists
+
 (defun alist-like-p (list)
   (every #'consp list))
 
@@ -49,6 +51,29 @@ head and the previous cons of the passed cons."
     (if (<= n len)
 	list
 	(nconc list (make-list (- n len))))))
+
+;;; Arrays
+
+(defun array-try-push (array x)
+  (let ((adjustable? (adjustable-array-p array))
+	(has-fill-pointer? (array-has-fill-pointer-p array)))
+    (if has-fill-pointer?
+	(if adjustable?
+	    (vector-push-extend x array)
+	    (vector-push x array)) ; uses `vector-push' result as condition.
+	nil)))
+
+(defun extend-array (array new-length fill-pointer)
+  "Makes a new adjutable fill-pointered array having same contents as `array'"
+  (if (adjustable-array-p array)
+      (adjust-array array new-length :initial-element nil
+		    :fill-pointer fill-pointer)
+      (let ((new-array (make-array new-length :adjustable t :initial-element nil
+				   :fill-pointer fill-pointer)))
+	(replace new-array array)
+	new-array)))
+
+;;; Others
 
 (defun compare-string-by-readtable-case (a b &key (case (readtable-case *readtable*)))
   ;; TODO: should I use `ignore-errors' for alist (or plist) ?

@@ -31,12 +31,6 @@
 - `:plist' :: appends (reference-token <value>) as an plist.
 ")
 
-(defparameter *traverse-non-adjustable-array-set-to-last-method* :create
-  "Determines how to set to the last (by '-') of non-adjutable arrays.
-- `:error' :: throws an error.
-- `:create' :: makes a new adjustable array contains <value>.
-")
-
 ;;; Tools
 
 (defmacro chained-setter-lambda ((&rest vars) (target next-function) &body body)
@@ -279,7 +273,8 @@
 		    (pick-setter #'traverse-plist-by-reference-token))
 		   (:array
 		    (chained-setter-lambda (x) (obj next-setter)
-		      (setf obj (add-to-array-tail obj x))))
+		      (setf obj (extend-array #() 1 0))
+		      (vector-push x obj)))
 		   (:error
 		    (thunk-lambda
 		      (error 'json-pointer-access-error
@@ -335,33 +330,6 @@
 
 ;;; Array
 
-(defun array-try-push (array x)
-  (let ((adjustable? (adjustable-array-p array))
-	(has-fill-pointer? (array-has-fill-pointer-p array)))
-    (if has-fill-pointer?
-	(if adjustable?
-	    (vector-push-extend x array)
-	    (vector-push x array)) ; uses `vector-push' result as condition.
-	nil)))
-
-(defun add-to-array-tail (array x)
-  ;; `array' may be NIL, because this may be called at traversing NIL.
-  (let ((pushed? (if (arrayp array)
-		     (array-try-push array x)
-		     nil)))
-    (unless pushed?
-      (ecase *traverse-non-adjustable-array-set-to-last-method*
-	(:error
-	 (error 'json-pointer-access-error
-		:format-control "tried to add to the tail of non-adjutable non-fill-pointer array"))
-	(:create
-	 (let* ((o-length (length array))
-		(new-array (make-array (1+ o-length) :adjustable t :fill-pointer o-length)))
-	   (replace new-array array)
-	   (setf array new-array))
-	 (vector-push x array)))))
-  array)
-
 (defmethod traverse-by-reference-token ((obj array) (rtoken (eql +last-nonexistent-element+))
 					set-method next-setter)
   (values nil nil
@@ -369,7 +337,11 @@
 	    ((nil) nil)
 	    ((:update :add)
 	     (chained-setter-lambda (x) (obj next-setter)
-	       (setf obj (add-to-array-tail obj x))))
+	       (unless (array-try-push obj x)
+		 ;; Automatically extends it.
+		 (let ((old-length (length obj)))
+		   (setf obj (extend-array obj (1+ old-length) old-length)))
+		 (vector-push x obj))))
 	    ((:delete :remove)
 	     (thunk-lambda
 	       (bad-deleter-error obj rtoken))))))
@@ -377,9 +349,16 @@
 (defmethod traverse-by-reference-token ((obj array) (rtoken integer) set-method next-setter)
   (if (not (array-in-bounds-p obj rtoken))
       (values nil nil
-	      (if set-method
-		  (thunk-lambda
-		    (out-of-index-error obj rtoken))))
+	      (ecase set-method
+		((nil) nil)
+		((:update :add)
+		 (chained-setter-lambda (x) (obj next-setter)
+		   ;; Automatically extends it.
+		   (setf obj (extend-array obj (1+ rtoken) t)
+			 (aref obj rtoken) x)))
+		((:delete :remove)
+		 (thunk-lambda
+		   (bad-deleter-error obj rtoken)))))
       (values (aref obj rtoken) rtoken
 	      (ecase set-method
 		((nil) nil)
