@@ -222,40 +222,51 @@
 				    (read-reference-token-as-index rtoken)
 				    set-method next-setter))
 
+(defvar *traverse-object-like-kinds* '(:alist))
+
 (defmethod traverse-by-reference-token
     ((obj list) (rtoken (eql +last-nonexistent-element+)) set-method next-setter)
   (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
 
 (defmethod traverse-by-reference-token ((obj list) (rtoken string) set-method next-setter)
-  (flet ((trvs-alist ()
-	   (traverse-list-by-reference-token :alist obj rtoken set-method next-setter))
-	 (trvs-plist ()
-	   (traverse-list-by-reference-token :plist obj rtoken set-method next-setter)))
+  (let* ((kinds *traverse-object-like-kinds*)
+	 (kinds (if *traverse-consider-plist*
+		    (list* :plist kinds)
+		    kinds))
+	 (last-tried-kind nil)
+	 (try-result
+	  ;; FIXME: This is too heavy! (but I think it is required..)
+	  (loop for kind in kinds
+	     as ret =
+	       (handler-case
+		   (multiple-value-list
+		    (traverse-list-by-reference-token kind obj rtoken set-method next-setter))
+		 (error () nil))
+	     as exists? = (second ret)
+	     do (setf last-tried-kind kind)
+	     when exists?
+	     return ret)))
     (multiple-value-bind (index bad-index-condition)
-	(read-reference-token-as-index rtoken nil) 
+	(read-reference-token-as-index rtoken nil)
       (cond
 	(index			   ; `rtoken' is ambiguous with index.
-	 (let ((try-alist-result (ignore-errors
-				   (multiple-value-list (trvs-alist))))
-	       (try-plist-result (and *traverse-consider-plist*
-				      (ignore-errors
-					(multiple-value-list (trvs-plist))))))
-	   (cond ((first try-alist-result)
-		  (values-list try-alist-result))
-		 ((first try-plist-result)
-		  (values-list try-plist-result))
-		 (t
-		  (traverse-list-by-reference-token :list obj index set-method next-setter)))))
+	 (if try-result
+	     (values-list try-result)
+	     (traverse-list-by-reference-token :list obj rtoken set-method next-setter)))
 	((and (typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
-	      (not (alist-like-p obj))
-	      (not (and *traverse-consider-plist*
-			(plist-like-p obj))))
+	      (not (second try-result))
+	      ;; If no objs containing `rtoken', throws the caught error.
+	      (loop for kind in (cdr (member last-tried-kind kinds)) 
+		 as exists? =
+		   (ignore-errors
+		     (nth-value 1 (traverse-list-by-reference-token
+				   kind obj rtoken set-method next-setter)))
+		 always (not exists?)))
 	 (error bad-index-condition))
 	(t			   ; `rtoken' assumed as a field name.
-	 (if (and *traverse-consider-plist*
-		  (plist-like-p obj))
-	     (trvs-plist)
-	     (trvs-alist)))))))
+	 (if try-result
+	     (values-list try-result)
+	     (traverse-list-by-reference-token :alist obj rtoken set-method next-setter)))))))
 
 (defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.
