@@ -51,19 +51,20 @@
 		    :format-control "reference token (~A) is not a known symbol")
 	    rtoken)
     (string
-     (cond ((and (> (length rtoken) 1)
-		 (char= (char rtoken 0) #\0)) ; RFC6901 does not allow '0' at the beginning.
-	    (if errorp
-		(error 'json-pointer-bad-reference-token-0-used-error
-		       :reference-token rtoken)
-		(values nil :badly-formatted-index)))
-	   (t
-	    (handler-case (parse-integer rtoken)
-	      (error ()
-		(if errorp
-		    (error 'json-pointer-bad-reference-token-not-numeric-error
-			   :reference-token rtoken)
-		    (values nil :not-a-number)))))))))
+     (flet ((error-if-required (&rest error-args)
+	      (let ((e (apply #'make-condition error-args)))
+		(if errorp (error e) e))))
+       (cond ((and (> (length rtoken) 1)
+		   (char= (char rtoken 0) #\0)) ; RFC6901 does not allow '0' at the beginning.
+	      (values nil
+		      (error-if-required 'json-pointer-bad-reference-token-0-used-error
+					 :reference-token rtoken)))
+	     (t
+	      (handler-case (parse-integer rtoken)
+		(error ()
+		  (values nil
+			  (error-if-required 'json-pointer-bad-reference-token-not-numeric-error
+					     :reference-token rtoken))))))))))
 
 ;;; Main traversal.
 
@@ -226,7 +227,7 @@
 	 (trvs-plist ()
 	   (traverse-plist-by-reference-token obj rtoken set-method next-setter)))
     (multiple-value-bind (index bad-index-condition)
-	(ignore-errors (read-reference-token-as-index rtoken)) 
+	(read-reference-token-as-index rtoken nil) 
       (cond
 	(index			   ; `rtoken' is ambiguous with index.
 	 (let ((try-alist-result (ignore-errors
