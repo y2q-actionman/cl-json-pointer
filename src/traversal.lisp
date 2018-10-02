@@ -102,7 +102,10 @@
 
 ;;; List
 
-(defun traverse-alist-by-reference-token (alist rtoken set-method next-setter)
+(defgeneric traverse-list-by-reference-token (list-kind list rtoken set-method next-setter))
+
+(defmethod traverse-list-by-reference-token ((kind (eql :alist)) alist rtoken
+					     set-method next-setter)
   ;; accepts `nil' as alist.
   (if-let ((entry (assoc rtoken alist :test #'compare-string-by-readtable-case)))
     (values (cdr entry) entry
@@ -130,7 +133,8 @@
 	       (thunk-lambda
 		 (bad-deleter-error alist rtoken)))))))
 
-(defun traverse-plist-by-reference-token (plist rtoken set-method next-setter)
+(defmethod traverse-list-by-reference-token ((kind (eql :plist)) plist rtoken
+					     set-method next-setter)
   ;; accepts `nil' as plist.
   (loop for plist-head on plist by #'cddr
      as (k v) = plist-head
@@ -161,10 +165,8 @@
 			  (thunk-lambda
 			    (bad-deleter-error plist rtoken))))))))
 		       
-(defgeneric traverse-ordinal-list-by-reference-token (list rtoken set-method next-setter))
-
-(defmethod traverse-ordinal-list-by-reference-token
-    (list (rtoken (eql +last-nonexistent-element+)) set-method next-setter)
+(defmethod traverse-list-by-reference-token ((kind (eql :list)) list
+					     (rtoken (eql +last-nonexistent-element+)) set-method next-setter)
   (values nil nil
 	  (ecase set-method
 	    ((nil) nil)
@@ -178,7 +180,8 @@
 	     (thunk-lambda
 	       (bad-deleter-error list rtoken))))))
 	
-(defmethod traverse-ordinal-list-by-reference-token (list (index integer) set-method next-setter)
+(defmethod traverse-list-by-reference-token ((kind (eql :list)) list
+					     (index integer) set-method next-setter)
   (if-let ((this-cons (nthcdr index list)))
     (values (car this-cons) this-cons
 	    (ecase set-method
@@ -213,19 +216,21 @@
 		 (setf list (extend-list (copy-list list) (1+ index)))
 		 (setf (nth index list) x)))))))
 
-(defmethod traverse-ordinal-list-by-reference-token (list (rtoken string) set-method next-setter)
-  (traverse-ordinal-list-by-reference-token list (read-reference-token-as-index rtoken)
-					    set-method next-setter))
+(defmethod traverse-list-by-reference-token ((kind (eql :list)) list
+					     (rtoken string) set-method next-setter)
+  (traverse-list-by-reference-token kind list
+				    (read-reference-token-as-index rtoken)
+				    set-method next-setter))
 
 (defmethod traverse-by-reference-token
     ((obj list) (rtoken (eql +last-nonexistent-element+)) set-method next-setter)
-  (traverse-ordinal-list-by-reference-token obj rtoken set-method next-setter))
+  (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
 
 (defmethod traverse-by-reference-token ((obj list) (rtoken string) set-method next-setter)
   (flet ((trvs-alist ()
-	   (traverse-alist-by-reference-token obj rtoken set-method next-setter))
+	   (traverse-list-by-reference-token :alist obj rtoken set-method next-setter))
 	 (trvs-plist ()
-	   (traverse-plist-by-reference-token obj rtoken set-method next-setter)))
+	   (traverse-list-by-reference-token :plist obj rtoken set-method next-setter)))
     (multiple-value-bind (index bad-index-condition)
 	(read-reference-token-as-index rtoken nil) 
       (cond
@@ -240,7 +245,7 @@
 		 ((first try-plist-result)
 		  (values-list try-plist-result))
 		 (t
-		  (traverse-ordinal-list-by-reference-token obj index set-method next-setter)))))
+		  (traverse-list-by-reference-token :list obj index set-method next-setter)))))
 	((and (typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
 	      (not (alist-like-p obj))
 	      (not (and *traverse-consider-plist*
@@ -269,22 +274,17 @@
 			    *traverse-nil-set-to-index-method*)
 			   (t
 			    *traverse-nil-set-to-name-method*))))
-	       (flet ((pick-setter (func)
-			(nth-value 2 (funcall func obj rtoken set-method next-setter))))
-		 (ecase nil-method
-		   (:list
-		    (pick-setter #'traverse-ordinal-list-by-reference-token))
-		   (:alist
-		    (pick-setter #'traverse-alist-by-reference-token))
-		   (:plist
-		    (pick-setter #'traverse-plist-by-reference-token))
-		   (:array
-		    (chained-setter-lambda (x) (next-setter)
-		      (make-array 1 :adjustable t :initial-element x :fill-pointer t)))
-		   (:error
-		    (thunk-lambda
-		      (error 'json-pointer-access-error
-			     :format-control "Set to nil by index is not supported"))))))))))
+	       (ecase nil-method
+		 ((:list :alist :plist)
+		  (nth-value 2 (traverse-list-by-reference-token
+				nil-method obj rtoken set-method next-setter)))
+		 (:array
+		  (chained-setter-lambda (x) (next-setter)
+		    (make-array 1 :adjustable t :initial-element x :fill-pointer t)))
+		 (:error
+		  (thunk-lambda
+		    (error 'json-pointer-access-error
+			   :format-control "Set to nil by index is not supported")))))))))
 
 ;;; Objects
 
