@@ -1,9 +1,9 @@
 (in-package :cl-user)
 
-(asdf:defsystem #:cl-json-pointer
+;;; The core package. (includes cl-json and yason)
+(asdf:defsystem #:cl-json-pointer/core
   :licence "MIT"
   :depends-on (#:alexandria #:closer-mop)
-  :serial t
   :components
   ((:module "src"
 	    :serial t
@@ -13,40 +13,58 @@
 	     (:file "condition")
 	     (:file "parser")
 	     (:file "traversal")
-	     (:file "interface"))))
-  :perform (asdf:load-op :after (o c)
-	      (when (find-package :st-json) ; If ST-JSON has been loaded, I load specific codes.
-		(asdf:load-system #:cl-json-pointer/st-json-support)))
-  :in-order-to ((asdf:test-op (asdf:test-op #:cl-json-pointer/test))))
+	     (:file "interface")))))
+
+;;; st-json support
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-package :st-json) ; If ST-JSON has been loaded, I load specific codes.
+    (pushnew :cl-json-pointer/st-json-support *features*)))
 
 (asdf:defsystem #:cl-json-pointer/st-json-support
   :licence "MIT"
-  :depends-on (#:cl-json-pointer #:st-json)
-  :serial t
+  :depends-on (#:cl-json-pointer/core #:st-json)
   :components
-  ((:module "src"
-	    :components ((:file "st-json-support")))))
+  ((:module "src" :components ((:file "st-json-support")))))
 
+;;; jsown support
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-package :jsown)		; If Jsown has been loaded...
+    (pushnew :cl-json-pointer/jsown-support *features*)))
+
+(asdf:defsystem #:cl-json-pointer/jsown-support
+  :licence "MIT"
+  :depends-on (#:cl-json-pointer/core #:jsown)
+  :components
+  ((:module "src" :components ((:file "jsown-support")))))
+
+;;; The main defsystem.
+(asdf:defsystem #:cl-json-pointer
+  :licence "MIT"
+  :depends-on (#:cl-json-pointer/core
+	       (:feature :cl-json-pointer/st-json-support
+			 #:cl-json-pointer/st-json-support)
+	       (:feature :cl-json-pointer/jsown-support
+			 #:cl-json-pointer/jsown-support))
+  :in-order-to ((asdf:test-op (asdf:test-op #:cl-json-pointer/test))))
+
+;;; For convenience.
 (asdf:defsystem #:cl-json-pointer/synonyms
   :licence "MIT"
   :depends-on (#:cl-json-pointer)
-  :serial t
   :components
-  ((:module "synonyms"
-	    :components ((:file "synonyms")))))
+  ((:module "synonyms" :components ((:file "synonyms")))))
 
+;;; Testing
 (asdf:defsystem #:cl-json-pointer/test
   :licence "MIT"
   :depends-on (#:cl-json-pointer
 	       #:cl-json-pointer/synonyms
-	       ;; platform supports
-	       #:cl-json-pointer/st-json-support
+	       ;; enables all platform supports
+	       #:cl-json-pointer/st-json-support #:cl-json-pointer/jsown-support
 	       ;; test libs
 	       #:named-readtables #:1am
 	       ;; json libs
-	       #:cl-json #:st-json #:yason
-	       ;; TODO
-	       ;;  #:jsown
+	       #:cl-json #:st-json #:yason #:jsown
 	       ;; #:jonathan ; I surprised this lib has 8 dependencies.
 	       ;; #:json-streams #:com.gigamonkeys.json
 	       ;; Not supported

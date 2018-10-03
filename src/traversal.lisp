@@ -29,6 +29,7 @@
   "Determines how to set to NIL by a name.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
+- `:jsown' :: makes a jsown-style object.
 ")
 
 ;;; Tools
@@ -233,40 +234,31 @@
 	 (kinds (if *traverse-consider-plist*
 		    (list* :plist kinds)
 		    kinds))
-	 (last-tried-kind nil)
-	 (try-result
-	  ;; FIXME: This is too heavy! (but I think it is required..)
+	 ;; FIXME: This is too heavy! (but I think it is required..)
+	 (found nil)
+	 (try-result-alist
 	  (loop for kind in kinds
 	     as ret =
 	       (handler-case
 		   (multiple-value-list
 		    (traverse-list-by-reference-token kind obj rtoken set-method next-setter))
 		 (error () nil))
-	     as exists? = (second ret)
-	     do (setf last-tried-kind kind)
-	     when exists?
-	     return ret)))
-    (multiple-value-bind (index bad-index-condition)
-	(read-reference-token-as-index rtoken nil)
-      (cond
-	(index			   ; `rtoken' is ambiguous with index.
-	 (if try-result
-	     (values-list try-result)
-	     (traverse-list-by-reference-token :list obj rtoken set-method next-setter)))
-	((and (typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
-	      (not (second try-result))
-	      ;; If no objs containing `rtoken', throws the caught error.
-	      (loop for kind in (cdr (member last-tried-kind kinds)) 
-		 as exists? =
-		   (ignore-errors
-		     (nth-value 1 (traverse-list-by-reference-token
-				   kind obj rtoken set-method next-setter)))
-		 always (not exists?)))
-	 (error bad-index-condition))
-	(t			   ; `rtoken' assumed as a field name.
-	 (if try-result
-	     (values-list try-result)
-	     (traverse-list-by-reference-token :alist obj rtoken set-method next-setter)))))))
+	     as entry = (cons kind ret)
+	     collect entry
+	     if (and (second ret)	; exists?
+		     (null found))
+	     do (setf found entry))))
+    (if found
+	(values-list (cdr found))
+	(multiple-value-bind (index bad-index-condition)
+	    (read-reference-token-as-index rtoken nil)
+	  (cond
+	    (index		   ; `rtoken' is ambiguous with index.
+	     (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
+	    ((typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
+	     (error bad-index-condition))
+	    (t			   ; `rtoken' assumed as a field name.
+	     (values-list (cdr (assoc *traverse-nil-set-to-name-method* try-result-alist)))))))))
 
 (defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.
@@ -286,7 +278,7 @@
 			   (t
 			    *traverse-nil-set-to-name-method*))))
 	       (ecase nil-method
-		 ((:list :alist :plist)
+		 ((:list :alist :plist :jsown)
 		  (nth-value 2 (traverse-list-by-reference-token
 				nil-method obj rtoken set-method next-setter)))
 		 (:array

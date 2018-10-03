@@ -58,7 +58,13 @@
 (defmacro with-current-json-reader ((func) &body body)
   `(let* ((*current-json-reader* ,func)
 	  (*current-array-type* (type-of (read-json-string +array-type-check+)))
-	  (*current-object-type* (type-of (read-json-string +object-type-check+))))
+	  (*current-object-type* (type-of (read-json-string +object-type-check+)))
+	  ;; TODO: FIXME: cleanup
+	  (cl-json-pointer::*traverse-nil-set-to-name-method*
+	   (if (and (subtypep *current-object-type* 'list)
+		    (eq (first (read-json-string +object-type-check+)) :OBJ)) 
+	       :jsown
+	       cl-json-pointer::*traverse-nil-set-to-name-method*)))
      ,@body))
 
 (defun run (&optional (readers *json-readers*))	; test entry point

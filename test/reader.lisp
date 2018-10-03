@@ -31,3 +31,8 @@
 ;; (*parse-json-booleans-as-symbols*) 
 ;; (*parse-json-null-as-keyword*)
 ;; (*parse-object-key-fn*)
+
+;;; jsown
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (pushnew 'jsown:parse *json-readers*))

@@ -10,7 +10,7 @@
 	       (chained-setter-lambda (x) (next-setter obj)
 		 (setf (st-json:getjso rtoken obj) x)))
 	      ((:delete :remove)
-	       (lambda ()
+	       (chained-setter-lambda () (next-setter obj)
 		 ;; FIXME: This code uses internal symbol..
 		 (let* ((internal-alist (st-json::jso-alist obj))
 			(alist-setter
@@ -18,5 +18,4 @@
 				       :alist internal-alist rtoken set-method
 				       (lambda (x)
 					 (setf (st-json::jso-alist obj) x))))))
-		   (funcall alist-setter))
-		 (funcall next-setter obj)))))))
+		   (funcall alist-setter))))))))

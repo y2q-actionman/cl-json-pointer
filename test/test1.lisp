@@ -204,4 +204,5 @@
     (1am:is (equal (cljsp:get a pointer) "test"))
 
     (let ((result-obj (read-json-string #{"foo": "test"})))
-      (1am:is (equalp a result-obj)))))
+      (1am:is (equal (cljsp:get a "/foo")
+		     (cljsp:get result-obj "/foo"))))))
