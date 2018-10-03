@@ -1,14 +1,8 @@
 (in-package :cl-user)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (when (find-package :st-json)
-    (pushnew :cl-json-pointer/st-json-support *features*)))
-
 (asdf:defsystem #:cl-json-pointer
   :licence "MIT"
   :depends-on (#:alexandria #:closer-mop)
-  ;; asdf3 says `:weakly-depends-on' is deprecated..
-  ;; :weakly-depends-on (#:cl-json)
   :serial t
   :components
   ((:module "src"
@@ -19,9 +13,19 @@
 	     (:file "condition")
 	     (:file "parser")
 	     (:file "traversal")
-	     (:file "interface")
-	     (:file "st-json-support" :if-feature :cl-json-pointer/st-json-support))))
+	     (:file "interface"))))
+  :perform (asdf:load-op :after (o c)
+	      (when (find-package :st-json) ; If ST-JSON has been loaded, I load specific codes.
+		(asdf:load-system #:cl-json-pointer/st-json-support)))
   :in-order-to ((asdf:test-op (asdf:test-op #:cl-json-pointer/test))))
+
+(asdf:defsystem #:cl-json-pointer/st-json-support
+  :licence "MIT"
+  :depends-on (#:cl-json-pointer #:st-json)
+  :serial t
+  :components
+  ((:module "src"
+	    :components ((:file "st-json-support")))))
 
 (asdf:defsystem #:cl-json-pointer/synonyms
   :licence "MIT"
@@ -29,12 +33,15 @@
   :serial t
   :components
   ((:module "synonyms"
-	    :components
-	    ((:file "synonyms")))))
+	    :components ((:file "synonyms")))))
 
 (asdf:defsystem #:cl-json-pointer/test
   :licence "MIT"
-  :depends-on (#:cl-json-pointer #:cl-json-pointer/synonyms
+  :depends-on (#:cl-json-pointer
+	       #:cl-json-pointer/synonyms
+	       ;; platform supports
+	       #:cl-json-pointer/st-json-support
+	       ;; test libs
 	       #:named-readtables #:1am
 	       ;; json libs
 	       #:cl-json #:st-json #:yason

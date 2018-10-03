@@ -14,8 +14,8 @@
 		 ;; FIXME: This code uses internal symbol..
 		 (let* ((internal-alist (st-json::jso-alist obj))
 			(alist-setter
-			 (nth-value 2 (traverse-alist-by-reference-token
-				       internal-alist rtoken set-method
+			 (nth-value 2 (traverse-list-by-reference-token
+				       :alist internal-alist rtoken set-method
 				       (lambda (x)
 					 (setf (st-json::jso-alist obj) x))))))
 		   (funcall alist-setter))
