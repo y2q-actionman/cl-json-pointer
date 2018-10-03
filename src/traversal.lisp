@@ -234,31 +234,36 @@
 	 (kinds (if *traverse-consider-plist*
 		    (list* :plist kinds)
 		    kinds))
-	 ;; FIXME: This is too heavy! (but I think it is required..)
-	 (found nil)
-	 (try-result-alist
-	  (loop for kind in kinds
-	     as ret =
-	       (handler-case
-		   (multiple-value-list
-		    (traverse-list-by-reference-token kind obj rtoken set-method next-setter))
-		 (error () nil))
-	     as entry = (cons kind ret)
-	     collect entry
-	     if (and (second ret)	; exists?
-		     (null found))
-	     do (setf found entry))))
-    (if found
-	(values-list (cdr found))
-	(multiple-value-bind (index bad-index-condition)
-	    (read-reference-token-as-index rtoken nil)
-	  (cond
-	    (index		   ; `rtoken' is ambiguous with index.
-	     (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
-	    ((typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
-	     (error bad-index-condition))
-	    (t			   ; `rtoken' assumed as a field name.
-	     (values-list (cdr (assoc *traverse-nil-set-to-name-method* try-result-alist)))))))))
+	 (try-result-alist nil))
+    ;; `rtoken' may be ambiguous with an index or a name of object fields.
+    ;; 
+    ;; 1. Try to use it as an existed field name.
+    ;; FIXME: This loop is too heavy! (but I think it is required..)
+    (loop for kind in kinds
+       as ret =
+	 (handler-case
+	     (multiple-value-list
+	      (traverse-list-by-reference-token kind obj rtoken set-method next-setter))
+	   (error () nil))
+       if (second ret)			; exists?
+       do (return-from traverse-by-reference-token
+	    (values-list ret))
+       else
+       do (push (cons kind ret) try-result-alist)
+       finally (nreversef try-result-alist))
+    ;; `rtoken' is not a name of object fields.
+    ;; 
+    ;; 2. If it can be read as an index, I treat `obj' as an ordinal list.
+    (multiple-value-bind (index bad-index-condition)
+	(read-reference-token-as-index rtoken nil)
+      (cond
+	(index				; yes, an ordinal list!
+	 (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
+	((typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
+	 (error bad-index-condition))
+	;; 3. `rtoken' assumed as a field name, but not found. 
+	(t
+	 (values-list (cdr (assoc *traverse-nil-set-to-name-method* try-result-alist))))))))
 
 (defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.

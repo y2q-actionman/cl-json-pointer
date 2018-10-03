@@ -10,6 +10,7 @@
 					rtoken set-method
 					(chained-setter-lambda (x) (next-setter jsown-obj)
 					  (setf (cdr jsown-obj) x)))
+      ;; TODO: FIXME: I think this path is redundant..
       (values nil nil
 	      (ecase set-method
 		((nil) nil)
