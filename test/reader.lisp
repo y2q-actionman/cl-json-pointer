@@ -36,3 +36,9 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew 'jsown:parse *json-readers*))
+
+;;; com.gigamonkeys.json
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (pushnew :plist cl-json-pointer::*traverse-object-like-kinds*) ; FIXME
+  (pushnew 'com.gigamonkeys.json:parse-json *json-readers*))

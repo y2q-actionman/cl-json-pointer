@@ -2,14 +2,11 @@
 
 ;;; Switches
 
-(defparameter *traverse-treat-string-as-atom* t
+(defvar *traverse-treat-string-as-atom* t
   ;; I don't want to treat string as an array.
   "If this is T, cl-json-pointer trests string as atom.")
 
-(defparameter *traverse-consider-plist* nil
-  "If this is T, cl-json-pointer considers plists at traversaling.")
-
-(defparameter *traverse-nil-set-to-last-method* :list
+(defvar *traverse-nil-set-to-last-method* :list
   "Determines how to set to the last (by '-') of NIL.
 - `:list' :: pushes <value> as an ordinal list.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
@@ -17,7 +14,7 @@
 - `:array' :: makes a new array contains <value>.
 ")
 
-(defparameter *traverse-nil-set-to-index-method* :list
+(defvar *traverse-nil-set-to-index-method* :list
   "Determines how to set to NIL by an index.
 - `:list' :: makes a new list and set <value> into nth point.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
@@ -25,12 +22,18 @@
 - `:error' :: throws an error.
 ")
 
-(defparameter *traverse-nil-set-to-name-method* :alist
+(defvar *traverse-nil-set-to-name-method* :alist
   "Determines how to set to NIL by a name.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
 - `:jsown' :: makes a jsown-style object.
 ")
+
+(defvar *traverse-object-like-kinds* '(:alist))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-package :com.gigamonkeys.json)
+    (pushnew :plist *traverse-object-like-kinds*)))
 
 ;;; Tools
 
@@ -223,17 +226,12 @@
 				    (read-reference-token-as-index rtoken)
 				    set-method next-setter))
 
-(defvar *traverse-object-like-kinds* '(:alist))
-
 (defmethod traverse-by-reference-token
     ((obj list) (rtoken (eql +last-nonexistent-element+)) set-method next-setter)
   (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
 
 (defmethod traverse-by-reference-token ((obj list) (rtoken string) set-method next-setter)
   (let* ((kinds *traverse-object-like-kinds*)
-	 (kinds (if *traverse-consider-plist*
-		    (list* :plist kinds)
-		    kinds))
 	 (try-result-alist nil))
     ;; `rtoken' may be ambiguous with an index or a name of object fields.
     ;; 
@@ -252,18 +250,33 @@
        do (push (cons kind ret) try-result-alist)
        finally (nreversef try-result-alist))
     ;; `rtoken' is not a name of object fields.
-    ;; 
+    ;;
     ;; 2. If it can be read as an index, I treat `obj' as an ordinal list.
     (multiple-value-bind (index bad-index-condition)
 	(read-reference-token-as-index rtoken nil)
-      (cond
-	(index				; yes, an ordinal list!
-	 (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
-	((typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
-	 (error bad-index-condition))
-	;; 3. `rtoken' assumed as a field name, but not found. 
-	(t
-	 (values-list (cdr (assoc *traverse-nil-set-to-name-method* try-result-alist))))))))
+      (when index			; yes, an ordinal list!
+	(return-from traverse-by-reference-token
+	  (traverse-list-by-reference-token :list obj rtoken set-method next-setter)))
+      (when (typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
+	(error bad-index-condition)))
+    ;; 3. `rtoken' assumed as a field name, but not found.
+    ;; 3-1. use the specified default.
+    (when-let* ((default (assoc *traverse-nil-set-to-name-method* try-result-alist))
+		(default-setter (third (cdr default))))
+      (return-from traverse-by-reference-token
+	(values nil nil default-setter)))
+    ;; 3-2. use a found one.
+    (loop for (nil nil nil setter) in try-result-alist
+       when setter
+       return (return-from traverse-by-reference-token
+		(values nil nil setter)))
+    ;; 3-3. no way...
+    (values nil nil
+	    (if set-method
+		(thunk-lambda
+		  (error 'json-pointer-not-found-error
+			 :format-control "There is no way to set to ~A (rtoken ~A)"
+			 :format-arguments (list obj rtoken)))))))
 
 (defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.

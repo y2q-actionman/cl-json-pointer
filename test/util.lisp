@@ -61,10 +61,11 @@
 	  (*current-object-type* (type-of (read-json-string +object-type-check+)))
 	  ;; TODO: FIXME: cleanup
 	  (cl-json-pointer::*traverse-nil-set-to-name-method*
-	   (if (and (subtypep *current-object-type* 'list)
-		    (eq (first (read-json-string +object-type-check+)) :OBJ)) 
-	       :jsown
-	       cl-json-pointer::*traverse-nil-set-to-name-method*)))
+	   (case *current-json-reader*
+	     (jsown:parse :jsown)
+	     (com.gigamonkeys.json:parse-json :plist)
+	     (otherwise
+	      cl-json-pointer::*traverse-nil-set-to-name-method*))))
      ,@body))
 
 (defun run (&optional (readers *json-readers*))	; test entry point
