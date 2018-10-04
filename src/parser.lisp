@@ -1,6 +1,6 @@
 (in-package :cl-json-pointer)
 
-(defconstant +last-nonexistent-element+
+(defconstant +end+
   '-
   "A symbol indicates 'the (nonexistent) member after the last array element', denoted by '-'")
 
@@ -48,8 +48,8 @@
     (declare (type string buf)
 	     (dynamic-extent buf))
     (flet ((push-reference-token ()
-	     (push (if (string= buf +last-nonexistent-element+)
-		       +last-nonexistent-element+
+	     (push (if (string= buf +end+)
+		       +end+
 		       (copy-seq buf))
 		   tokens)
 	     (setf (fill-pointer buf) 0)))

@@ -49,7 +49,7 @@
 (defun read-reference-token-as-index (rtoken &optional (errorp t))
   (etypecase rtoken
     (integer rtoken)
-    (symbol (assert (eq rtoken +last-nonexistent-element+)
+    (symbol (assert (eq rtoken +end+)
 		    () 'json-pointer-bad-reference-token-error
 		    :reference-token rtoken
 		    :format-control "reference token (~A) is not a known symbol")
@@ -170,7 +170,7 @@
 			    (bad-deleter-error plist rtoken))))))))
 		       
 (defmethod traverse-list-by-reference-token ((kind (eql :list)) list
-					     (rtoken (eql +last-nonexistent-element+)) set-method next-setter)
+					     (rtoken (eql +end+)) set-method next-setter)
   (values nil nil
 	  (ecase set-method
 	    ((nil) nil)
@@ -226,8 +226,7 @@
 				    (read-reference-token-as-index rtoken)
 				    set-method next-setter))
 
-(defmethod traverse-by-reference-token
-    ((obj list) (rtoken (eql +last-nonexistent-element+)) set-method next-setter)
+(defmethod traverse-by-reference-token ((obj list) (rtoken (eql +end+)) set-method next-setter)
   (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
 
 (defmethod traverse-by-reference-token ((obj list) (rtoken string) set-method next-setter)
@@ -289,7 +288,7 @@
 	    ((:update :add)
 	     (let* ((index (read-reference-token-as-index rtoken nil))
 		    (nil-method
-		     (cond ((eq index +last-nonexistent-element+)
+		     (cond ((eq index +end+)
 			    *traverse-nil-set-to-last-method*)
 			   ((integerp index)
 			    *traverse-nil-set-to-index-method*)
@@ -367,8 +366,7 @@
 
 ;;; Array
 
-(defmethod traverse-by-reference-token ((obj array) (rtoken (eql +last-nonexistent-element+))
-					set-method next-setter)
+(defmethod traverse-by-reference-token ((obj array) (rtoken (eql +end+)) set-method next-setter)
   (values nil nil
 	  (ecase set-method
 	    ((nil) nil)
@@ -414,7 +412,7 @@
 ;;; Entry Point
 
 (defun traverse-by-json-pointer (obj pointer set-method)
-  "Traverses an object with a parsed json-pointer, and returns three values:
+  "Traverses `obj' with a parsed json-pointer (`pointer'), and returns three values:
 the referred object, existence (boolean), and a closure can be used as a setter.
 
 `set-method' determines how to *set* into `obj' by the returned setter:
