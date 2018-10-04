@@ -72,10 +72,12 @@
 
 ;;; Main traversal.
 
-(defgeneric traverse-by-reference-token (obj rtoken set-method next-setter)
-  (:documentation "Traverses an object with a reference token, and
-  returns three values: a referred object, existence (boolean), and a
-  closure can be used as a setter."))
+(defgeneric traverse-by-reference-token (obj obj-type rtoken set-method next-setter)
+  (:documentation "Traverses `obj' with a reference token (`rtoken'), and
+returns three values: a referred object, existence (boolean), and a
+closure can be used as a setter.
+
+`obj-type' is used when `obj''s type is ambiguous, especially lists."))
 
 (defun bad-deleter-error (obj rtoken)
   (error 'json-pointer-access-error
@@ -84,24 +86,24 @@
 
 ;;; Atoms
 
-(defun error-on-traversing-atom (obj rtoken)
+(defun error-on-traversing-atom (obj obj-type rtoken)
   ;; FIXME: I think this should be error, but `silent' option is required..
   (values nil nil
 	  (thunk-lambda
 	    ;; this is the only point using `json-pointer-not-found-error'
 	    (error 'json-pointer-not-found-error
-		   :format-control "obj ~S is not an array or an object (pointer is ~A)"
-		   :format-arguments (list obj rtoken)))))
+		   :format-control "obj ~S is not an array or an object (reference token: ~A, obj-type ~A)"
+		   :format-arguments (list obj rtoken obj-type)))))
 
-(defmethod traverse-by-reference-token (obj rtoken set-method next-setter)
+(defmethod traverse-by-reference-token (obj obj-type rtoken set-method next-setter)
   (declare (ignore set-method next-setter))
   ;; bottom case -- refers an unsupported type object.
-  (error-on-traversing-atom obj rtoken))
+  (error-on-traversing-atom obj obj-type rtoken))
 
-(defmethod traverse-by-reference-token ((obj string) rtoken set-method next-setter)
+(defmethod traverse-by-reference-token ((obj string) obj-type rtoken set-method next-setter)
   (declare (ignore set-method next-setter))
   (if *traverse-treat-string-as-atom*
-      (error-on-traversing-atom obj rtoken)
+      (error-on-traversing-atom obj obj-type rtoken)
       (call-next-method)))
 
 ;;; List
@@ -226,10 +228,11 @@
 				    (read-reference-token-as-index rtoken)
 				    set-method next-setter))
 
-(defmethod traverse-by-reference-token ((obj list) (rtoken (eql +end+)) set-method next-setter)
+(defmethod traverse-by-reference-token ((obj list) obj-type (rtoken (eql +end+)) set-method next-setter)
+  (declare (ignore obj-type))
   (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
 
-(defmethod traverse-by-reference-token ((obj list) (rtoken string) set-method next-setter)
+(defmethod traverse-by-reference-token ((obj list) obj-type (rtoken string) set-method next-setter)
   (let* ((kinds *traverse-object-like-kinds*)
 	 (try-result-alist nil))
     ;; `rtoken' may be ambiguous with an index or a name of object fields.
@@ -277,7 +280,7 @@
 			 :format-control "There is no way to set to ~A (rtoken ~A)"
 			 :format-arguments (list obj rtoken)))))))
 
-(defmethod traverse-by-reference-token ((obj null) rtoken set-method next-setter)
+(defmethod traverse-by-reference-token ((obj null) obj-type rtoken set-method next-setter)
   ;; empty. this is problematic for setting.
   (values nil nil
 	  (ecase set-method
@@ -336,17 +339,20 @@
 			 :format-control "object ~A does not have '~A' slot"
 			 :format-arguments (list obj rtoken)))))))
 
-(defmethod traverse-by-reference-token ((obj standard-object) rtoken set-method next-setter)
-  ;; cl-json:fluid-object can be treated here.
+(defmethod traverse-by-reference-token ((obj standard-object) obj-type rtoken set-method next-setter)
+ ;; cl-json:fluid-object can be treated here.
+  (declare (ignore obj-type))
   (traverse-by-reference-token-using-class obj rtoken set-method next-setter (class-of obj)))
 
-(defmethod traverse-by-reference-token ((obj structure-object) rtoken set-method next-setter)
+(defmethod traverse-by-reference-token ((obj structure-object) obj-type rtoken set-method next-setter)
+  (declare (ignore obj-type))
   (traverse-by-reference-token-using-class obj rtoken set-method next-setter (class-of obj)))
 
 ;;; Hash table
 
-(defmethod traverse-by-reference-token ((obj hash-table) rtoken set-method next-setter)
+(defmethod traverse-by-reference-token ((obj hash-table) obj-type rtoken set-method next-setter)
   ;; TODO: use `compare-string-by-readtable-case' (depending on json lib..)
+  (declare (ignore obj-type))
   (multiple-value-bind (value exists?)
       (gethash rtoken obj)
     (values value exists?
@@ -366,7 +372,8 @@
 
 ;;; Array
 
-(defmethod traverse-by-reference-token ((obj array) (rtoken (eql +end+)) set-method next-setter)
+(defmethod traverse-by-reference-token ((obj array) obj-type (rtoken (eql +end+)) set-method next-setter)
+  (declare (ignore obj-type))
   (values nil nil
 	  (ecase set-method
 	    ((nil) nil)
@@ -381,7 +388,8 @@
 	     (thunk-lambda
 	       (bad-deleter-error obj rtoken))))))
 
-(defmethod traverse-by-reference-token ((obj array) (rtoken integer) set-method next-setter)
+(defmethod traverse-by-reference-token ((obj array) obj-type (rtoken integer) set-method next-setter)
+  (declare (ignore obj-type))
   (if (not (array-in-bounds-p obj rtoken))
       (values nil nil
 	      (ecase set-method
@@ -405,9 +413,9 @@
 		   ;; Fills with NIL. (There is no way to 'remove nil')
 		   (setf (aref obj rtoken) nil)))))))
 
-(defmethod traverse-by-reference-token ((obj array) (rtoken string) set-method next-setter)
+(defmethod traverse-by-reference-token ((obj array) obj-type (rtoken string) set-method next-setter)
   (let ((index (read-reference-token-as-index rtoken)))
-    (traverse-by-reference-token obj index set-method next-setter)))
+    (traverse-by-reference-token obj obj-type index set-method next-setter)))
 
 ;;; Entry Point
 
@@ -434,6 +442,6 @@ the referred object, existence (boolean), and a closure can be used as a setter.
 			      (:remove (if next :add :remove))
 			      (:delete (if next :update :delete)))
        do (setf (values value exists? setter)
-		(traverse-by-reference-token value rtoken this-set-method setter))
+		(traverse-by-reference-token value t rtoken this-set-method setter))
        while next)
     (values value exists? setter)))

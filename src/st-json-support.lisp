@@ -1,6 +1,6 @@
 (in-package :cl-json-pointer)
 
-(defmethod traverse-by-reference-token ((obj st-json:jso) rtoken set-method next-setter)
+(defmethod traverse-by-reference-token ((obj st-json:jso) obj-type rtoken set-method next-setter)
   (multiple-value-bind (val exists)
       (st-json:getjso rtoken obj)
     (values val exists
