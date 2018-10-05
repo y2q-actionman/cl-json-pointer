@@ -11,6 +11,7 @@
 		#:slot-makunbound-using-class)
   (:export
    #:json-pointer-error
+   #:*json-object-type*
    #:parse-json-pointer
    #:get-by-json-pointer
    #:exists-p-by-json-pointer
