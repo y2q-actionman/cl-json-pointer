@@ -72,7 +72,7 @@
 
 ;;; Main traversal.
 
-(defgeneric traverse-by-reference-token (obj obj-type rtoken set-method next-setter)
+(defgeneric traverse-by-reference-token (obj-type obj rtoken set-method next-setter)
   (:documentation "Traverses `obj' with a reference token (`rtoken'), and
 returns three values: a referred object, existence (boolean), and a
 closure can be used as a setter.
@@ -86,7 +86,7 @@ closure can be used as a setter.
 
 ;;; Atoms
 
-(defun error-on-traversing-atom (obj obj-type rtoken)
+(defun error-on-traversing-atom (obj-type obj rtoken)
   ;; FIXME: I think this should be error, but `silent' option is required..
   (values nil nil
 	  (thunk-lambda
@@ -95,12 +95,12 @@ closure can be used as a setter.
 		   :format-control "obj ~S is not an array or an object (reference token: ~A, obj-type ~A)"
 		   :format-arguments (list obj rtoken obj-type)))))
 
-(defmethod traverse-by-reference-token (obj obj-type rtoken set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type obj rtoken set-method next-setter)
   (declare (ignore set-method next-setter))
   ;; bottom case -- refers an unsupported type object.
   (error-on-traversing-atom obj obj-type rtoken))
 
-(defmethod traverse-by-reference-token ((obj string) obj-type rtoken set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj string) rtoken set-method next-setter)
   (declare (ignore set-method next-setter))
   (if *traverse-treat-string-as-atom*
       (error-on-traversing-atom obj obj-type rtoken)
@@ -108,10 +108,8 @@ closure can be used as a setter.
 
 ;;; List
 
-(defgeneric traverse-list-by-reference-token (list-kind list rtoken set-method next-setter))
-
-(defmethod traverse-list-by-reference-token ((kind (eql :alist)) alist rtoken
-					     set-method next-setter)
+(defmethod traverse-by-reference-token ((kind (eql :alist)) (alist list) rtoken
+					set-method next-setter)
   ;; accepts `nil' as alist.
   (if-let ((entry (assoc rtoken alist :test #'compare-string-by-readtable-case)))
     (values (cdr entry) entry
@@ -139,8 +137,8 @@ closure can be used as a setter.
 	       (thunk-lambda
 		 (bad-deleter-error alist rtoken)))))))
 
-(defmethod traverse-list-by-reference-token ((kind (eql :plist)) plist rtoken
-					     set-method next-setter)
+(defmethod traverse-by-reference-token ((kind (eql :plist)) (plist list) rtoken
+					set-method next-setter)
   ;; accepts `nil' as plist.
   (loop for plist-head on plist by #'cddr
      as (k v) = plist-head
@@ -171,8 +169,8 @@ closure can be used as a setter.
 			  (thunk-lambda
 			    (bad-deleter-error plist rtoken))))))))
 		       
-(defmethod traverse-list-by-reference-token ((kind (eql :list)) list
-					     (rtoken (eql +end+)) set-method next-setter)
+(defmethod traverse-by-reference-token ((kind (eql :list)) (list list)
+					(rtoken (eql +end+)) set-method next-setter)
   (values nil nil
 	  (ecase set-method
 	    ((nil) nil)
@@ -186,8 +184,8 @@ closure can be used as a setter.
 	     (thunk-lambda
 	       (bad-deleter-error list rtoken))))))
 	
-(defmethod traverse-list-by-reference-token ((kind (eql :list)) list
-					     (index integer) set-method next-setter)
+(defmethod traverse-by-reference-token ((kind (eql :list)) (list list)
+					(index integer) set-method next-setter)
   (if-let ((this-cons (nthcdr index list)))
     (values (car this-cons) this-cons
 	    (ecase set-method
@@ -222,17 +220,17 @@ closure can be used as a setter.
 		 (setf list (extend-list (copy-list list) (1+ index)))
 		 (setf (nth index list) x)))))))
 
-(defmethod traverse-list-by-reference-token ((kind (eql :list)) list
-					     (rtoken string) set-method next-setter)
-  (traverse-list-by-reference-token kind list
-				    (read-reference-token-as-index rtoken)
-				    set-method next-setter))
+(defmethod traverse-by-reference-token ((kind (eql :list)) (list list)
+					(rtoken string) set-method next-setter)
+  (traverse-by-reference-token kind list
+			       (read-reference-token-as-index rtoken)
+			       set-method next-setter))
 
-(defmethod traverse-by-reference-token ((obj list) obj-type (rtoken (eql +end+)) set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj list) (rtoken (eql +end+)) set-method next-setter)
   (declare (ignore obj-type))
-  (traverse-list-by-reference-token :list obj rtoken set-method next-setter))
+  (traverse-by-reference-token :list obj rtoken set-method next-setter))
 
-(defmethod traverse-by-reference-token ((obj list) obj-type (rtoken string) set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj list) (rtoken string) set-method next-setter)
   (let* ((kinds *traverse-object-like-kinds*)
 	 (try-result-alist nil))
     ;; `rtoken' may be ambiguous with an index or a name of object fields.
@@ -243,7 +241,7 @@ closure can be used as a setter.
        as ret =
 	 (handler-case
 	     (multiple-value-list
-	      (traverse-list-by-reference-token kind obj rtoken set-method next-setter))
+	      (traverse-by-reference-token kind obj rtoken set-method next-setter))
 	   (error () nil))
        if (second ret)			; exists?
        do (return-from traverse-by-reference-token
@@ -258,7 +256,7 @@ closure can be used as a setter.
 	(read-reference-token-as-index rtoken nil)
       (when index			; yes, an ordinal list!
 	(return-from traverse-by-reference-token
-	  (traverse-list-by-reference-token :list obj rtoken set-method next-setter)))
+	  (traverse-by-reference-token :list obj rtoken set-method next-setter)))
       (when (typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
 	(error bad-index-condition)))
     ;; 3. `rtoken' assumed as a field name, but not found.
@@ -280,7 +278,7 @@ closure can be used as a setter.
 			 :format-control "There is no way to set to ~A (rtoken ~A)"
 			 :format-arguments (list obj rtoken)))))))
 
-(defmethod traverse-by-reference-token ((obj null) obj-type rtoken set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.
   (values nil nil
 	  (ecase set-method
@@ -299,7 +297,7 @@ closure can be used as a setter.
 			    *traverse-nil-set-to-name-method*))))
 	       (ecase nil-method
 		 ((:list :alist :plist :jsown)
-		  (nth-value 2 (traverse-list-by-reference-token
+		  (nth-value 2 (traverse-by-reference-token
 				nil-method obj rtoken set-method next-setter)))
 		 (:array
 		  (chained-setter-lambda (x) (next-setter)
@@ -339,18 +337,18 @@ closure can be used as a setter.
 			 :format-control "object ~A does not have '~A' slot"
 			 :format-arguments (list obj rtoken)))))))
 
-(defmethod traverse-by-reference-token ((obj standard-object) obj-type rtoken set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj standard-object) rtoken set-method next-setter)
  ;; cl-json:fluid-object can be treated here.
   (declare (ignore obj-type))
   (traverse-by-reference-token-using-class obj rtoken set-method next-setter (class-of obj)))
 
-(defmethod traverse-by-reference-token ((obj structure-object) obj-type rtoken set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj structure-object) rtoken set-method next-setter)
   (declare (ignore obj-type))
   (traverse-by-reference-token-using-class obj rtoken set-method next-setter (class-of obj)))
 
 ;;; Hash table
 
-(defmethod traverse-by-reference-token ((obj hash-table) obj-type rtoken set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj hash-table) rtoken set-method next-setter)
   ;; TODO: use `compare-string-by-readtable-case' (depending on json lib..)
   (declare (ignore obj-type))
   (multiple-value-bind (value exists?)
@@ -372,7 +370,7 @@ closure can be used as a setter.
 
 ;;; Array
 
-(defmethod traverse-by-reference-token ((obj array) obj-type (rtoken (eql +end+)) set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj array) (rtoken (eql +end+)) set-method next-setter)
   (declare (ignore obj-type))
   (values nil nil
 	  (ecase set-method
@@ -388,7 +386,7 @@ closure can be used as a setter.
 	     (thunk-lambda
 	       (bad-deleter-error obj rtoken))))))
 
-(defmethod traverse-by-reference-token ((obj array) obj-type (rtoken integer) set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj array) (rtoken integer) set-method next-setter)
   (declare (ignore obj-type))
   (if (not (array-in-bounds-p obj rtoken))
       (values nil nil
@@ -413,9 +411,9 @@ closure can be used as a setter.
 		   ;; Fills with NIL. (There is no way to 'remove nil')
 		   (setf (aref obj rtoken) nil)))))))
 
-(defmethod traverse-by-reference-token ((obj array) obj-type (rtoken string) set-method next-setter)
+(defmethod traverse-by-reference-token (obj-type (obj array) (rtoken string) set-method next-setter)
   (let ((index (read-reference-token-as-index rtoken)))
-    (traverse-by-reference-token obj obj-type index set-method next-setter)))
+    (traverse-by-reference-token obj-type obj index set-method next-setter)))
 
 ;;; Entry Point
 
@@ -442,6 +440,6 @@ the referred object, existence (boolean), and a closure can be used as a setter.
 			      (:remove (if next :add :remove))
 			      (:delete (if next :update :delete)))
        do (setf (values value exists? setter)
-		(traverse-by-reference-token value t rtoken this-set-method setter))
+		(traverse-by-reference-token t value rtoken this-set-method setter))
        while next)
     (values value exists? setter)))

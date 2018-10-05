@@ -3,13 +3,13 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew :jsown *traverse-object-like-kinds*))
 
-(defmethod traverse-list-by-reference-token ((kind (eql :jsown)) jsown-obj
-					     rtoken set-method next-setter)
+(defmethod traverse-by-reference-token ((kind (eql :jsown)) (jsown-obj list)
+					rtoken set-method next-setter)
   (if (eq (car jsown-obj) :OBJ)
-      (traverse-list-by-reference-token :alist (cdr jsown-obj)
-					rtoken set-method
-					(chained-setter-lambda (x) (next-setter jsown-obj)
-					  (setf (cdr jsown-obj) x)))
+      (traverse-by-reference-token :alist (cdr jsown-obj)
+				   rtoken set-method
+				   (chained-setter-lambda (x) (next-setter jsown-obj)
+				     (setf (cdr jsown-obj) x)))
       ;; TODO: FIXME: I think this path is redundant..
       (values nil nil
 	      (ecase set-method
