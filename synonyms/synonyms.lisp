@@ -14,26 +14,28 @@
 (defun parse (obj &rest args &key &allow-other-keys)
   (apply #'parse-json-pointer obj args))
 
-(defun get (obj pointer)
-  (get-by-json-pointer obj pointer))
+(defun get (obj pointer &key (type t))
+  (get-by-json-pointer obj pointer :type type))
 
-(defun exists-p (obj pointer)
-  (exists-p-by-json-pointer obj pointer))
+(defun exists-p (obj pointer &key (type t))
+  (exists-p-by-json-pointer obj pointer :type type))
 
-(defun set (obj pointer value)
-  (set-by-json-pointer obj pointer value))
+(defun set (obj pointer value &key (type t))
+  (set-by-json-pointer obj pointer value :type type))
 
-(defun add (obj pointer value)
-  (add-by-json-pointer obj pointer value))
+(defun add (obj pointer value &key (type t))
+  (add-by-json-pointer obj pointer value :type type))
 
-(defun delete (obj pointer)
-  (delete-by-json-pointer obj pointer))
+(defun delete (obj pointer &key (type t))
+  (delete-by-json-pointer obj pointer :type type))
 
-(defun remove (obj pointer)
-  (remove-by-json-pointer obj pointer))
+(defun remove (obj pointer &key (type t))
+  (remove-by-json-pointer obj pointer :type type))
 
-(define-setf-expander get (obj pointer &environment env)
-  (get-setf-expansion `(get-by-json-pointer ,obj ,pointer) env))
+(define-setf-expander get (obj pointer &key (type t) &environment env)
+  (get-setf-expansion `(get-by-json-pointer ,obj ,pointer :type ,type) env))
 
-(defmacro update (obj pointer value)
-  `(update-by-json-pointer ,obj ,pointer ,value))
+;;; FIXME
+#+ (or)
+(defmacro update (obj pointer value &key (type t))
+  `(update-by-json-pointer ,obj ,pointer ,value :type ,type))

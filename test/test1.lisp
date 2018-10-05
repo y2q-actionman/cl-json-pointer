@@ -19,17 +19,17 @@
     (1am:is (equal (get-by-json-pointer obj "/qux/2") 5))
     (1am:is (not (get-by-json-pointer obj "/quo")))
 
-    (update-by-json-pointer obj "/foo" 6)
+    (setf obj (set-by-json-pointer obj "/foo" 6)) 
     (1am:is (equal (get-by-json-pointer obj "/foo") 6))
-    (update-by-json-pointer  obj "/foo" 7)
+    (setf obj (set-by-json-pointer obj "/foo" 7)) 
     (1am:is (equal (get-by-json-pointer obj "/foo") 7))
 
-    (update-by-json-pointer obj "/qux/-" 6)
+    (setf obj (set-by-json-pointer obj "/qux/-" 6)) 
     (1am:is (equalp (get-by-json-pointer obj "/qux")
 		    (current-json-reader-etypecase (*current-array-type*)
 		      (list '(3 4 5 6))
 		      (array #(3 4 5 6)))))
-    (update-by-json-pointer obj "/qux/-" 99)
+    (setf obj (set-by-json-pointer obj "/qux/-" 99)) 
     (1am:is (equalp (get-by-json-pointer obj "/qux")
 		    (current-json-reader-etypecase (*current-array-type*)
 		      (list '(3 4 5 6 99))
@@ -37,7 +37,7 @@
 
     (let ((pointer (parse-json-pointer "/foo")))
       (1am:is (equal (get-by-json-pointer obj pointer) 7))
-      (update-by-json-pointer obj pointer 999)
+      (setf obj (set-by-json-pointer obj pointer 999))
       (1am:is (equal (get-by-json-pointer obj pointer) 999)))))
 
 ;;; Test cases in test.js

@@ -417,7 +417,7 @@ closure can be used as a setter.
 
 ;;; Entry Point
 
-(defun traverse-by-json-pointer (obj pointer set-method)
+(defun traverse-by-json-pointer (obj obj-type pointer set-method)
   "Traverses `obj' with a parsed json-pointer (`pointer'), and returns three values:
 the referred object, existence (boolean), and a closure can be used as a setter.
 
@@ -427,6 +427,9 @@ the referred object, existence (boolean), and a closure can be used as a setter.
 - `:delete' :: Destructively deletes from `obj'.
 - `:add' :: If changing a list, makes a new list containing the set'ed value. (non-list objs are still modified).
 - `:remove' :: If deleting form a list, makes a new list not containing the removed value. (non-list objs are still modified).
+
+`obj-type' is a keyword specifies JSON object flavour. `:jsown' or
+`:com.gigamonkeys.json' has special effects.
 "
   (let ((value obj)
 	(exists? t)
@@ -440,6 +443,6 @@ the referred object, existence (boolean), and a closure can be used as a setter.
 			      (:remove (if next :add :remove))
 			      (:delete (if next :update :delete)))
        do (setf (values value exists? setter)
-		(traverse-by-reference-token t value rtoken this-set-method setter))
+		(traverse-by-reference-token obj-type value rtoken this-set-method setter))
        while next)
     (values value exists? setter)))
