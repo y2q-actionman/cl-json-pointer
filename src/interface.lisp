@@ -50,6 +50,5 @@ calls this for making a setter function."
 	      `(get-by-json-pointer ,o-getter ,p-tmp :type ,type-tmp)))))
 
 ;;; FIXME: I require `:type' keyword, but `define-modify-macro' does not accept it.
-#+ (or)
 (define-modify-macro update-by-json-pointer (pointer value)
   set-by-json-pointer)
