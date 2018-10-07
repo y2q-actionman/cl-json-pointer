@@ -14,7 +14,8 @@
 	     (:file "parser")
 	     (:file "traversal")
 	     (:file "interface")
-	     (:file "com-gigamonkeys-json-support")))))
+	     (:file "com-gigamonkeys-json-support")
+	     (:file "jsown-support")))))
 
 ;;; st-json support
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -27,25 +28,12 @@
   :components
   ((:module "src" :components ((:file "st-json-support")))))
 
-;;; jsown support
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (when (find-package :jsown)		; If Jsown has been loaded...
-    (pushnew :cl-json-pointer/jsown-support *features*)))
-
-(asdf:defsystem #:cl-json-pointer/jsown-support
-  :licence "MIT"
-  :depends-on (#:cl-json-pointer/core #:jsown)
-  :components
-  ((:module "src" :components ((:file "jsown-support")))))
-
 ;;; The main defsystem.
 (asdf:defsystem #:cl-json-pointer
   :licence "MIT"
   :depends-on (#:cl-json-pointer/core
 	       (:feature :cl-json-pointer/st-json-support
-			 #:cl-json-pointer/st-json-support)
-	       (:feature :cl-json-pointer/jsown-support
-			 #:cl-json-pointer/jsown-support))
+			 #:cl-json-pointer/st-json-support))
   :in-order-to ((asdf:test-op (asdf:test-op #:cl-json-pointer/test))))
 
 ;;; For convenience.
@@ -61,8 +49,8 @@
   :depends-on (#:cl-json-pointer
 	       #:cl-json-pointer/synonyms
 	       ;; All Json libs and platform supports
-	       #:cl-json #:yason #:com.gigamonkeys.json
-	       #:cl-json-pointer/st-json-support #:cl-json-pointer/jsown-support
+	       #:cl-json #:yason #:com.gigamonkeys.json #:jsown
+	       #:cl-json-pointer/st-json-support
 	       ;; test libs
 	       #:named-readtables #:1am
 	       ;; json libs

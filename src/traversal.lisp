@@ -26,7 +26,6 @@
   "Determines how to set to NIL by a name.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
-- `:jsown' :: makes a jsown-style object.
 ")
 
 (defvar *traverse-object-like-kinds* '(:alist))
@@ -298,7 +297,7 @@ closure can be used as a setter.
 			   (t
 			    *traverse-nil-set-to-name-method*))))
 	       (ecase nil-method
-		 ((:list :alist :plist :jsown)
+		 ((:list :alist :plist)
 		  (nth-value 2 (traverse-by-reference-token
 				nil-method obj rtoken set-method next-setter)))
 		 (:array

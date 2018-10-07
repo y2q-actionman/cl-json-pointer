@@ -26,7 +26,7 @@
 
 ;;; for multiple json libraries
 
-(defvar *json-readers* nil)
+(defvar *json-reader-alist* nil)
 
 (defvar *current-json-reader* nil)
 (defvar *current-array-type* nil)
@@ -60,19 +60,13 @@
 	  (*current-array-type* (type-of (read-json-string +array-type-check+)))
 	  (*current-object-type* (type-of (read-json-string +object-type-check+)))
 	  (*json-object-type*
-	   (case *current-json-reader*
-	     (com.gigamonkeys.json:parse-json :com.gigamonkeys.json)
-	     (t *json-object-type*)))
-	  ;; TODO: FIXME: cleanup
-	  (cl-json-pointer::*traverse-nil-set-to-name-method*
-	   (case *current-json-reader*
-	     (jsown:parse :jsown)
-	     (otherwise
-	      cl-json-pointer::*traverse-nil-set-to-name-method*))))
+	   (if-let ((type (rassoc ,func *json-reader-alist*)))
+	     (car type)
+	     *json-reader-alist*)))
      ,@body))
 
-(defun run (&optional (readers *json-readers*))	; test entry point
-  (loop for func in readers
+(defun run (&optional (reader-alist *json-reader-alist*))	; test entry point
+  (loop for (nil . func) in reader-alist
      do (with-current-json-reader (func)
 	  (format t "~&testing on ~A:~A~& (JSON ~A, JSON array = ~A, JSON object = ~A)~%"
 		  (package-name (symbol-package *current-json-reader*))

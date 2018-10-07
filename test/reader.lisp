@@ -13,18 +13,22 @@
   (setf *current-json-reader* 'read-json-string/cl-json-crafted))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew 'cl-json:decode-json-from-string *json-readers*)
-  (pushnew 'read-json-string/cl-json-crafted *json-readers*))
+  (pushnew (cons t 'cl-json:decode-json-from-string)
+	   *json-reader-alist*)
+  (pushnew (cons :cl-json 'cl-json:decode-json-from-string)
+	   *json-reader-alist*))
 
 ;;; st-json
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew 'st-json:read-json-from-string *json-readers*))
+  (pushnew (cons :st-json 'st-json:read-json-from-string)
+	   *json-reader-alist*))
 
 ;;; yason
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew 'yason:parse *json-readers*))
+  (pushnew (cons :yason 'yason:parse)
+	   *json-reader-alist*))
 
 ;; TODO: use variables
 ;; (*parse-json-arrays-as-vectors*)
@@ -35,10 +39,11 @@
 ;;; jsown
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew 'jsown:parse *json-readers*))
+  (pushnew (cons :jsown 'jsown:parse)
+	   *json-reader-alist*))
 
 ;;; com.gigamonkeys.json
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew :plist cl-json-pointer::*traverse-object-like-kinds*) ; FIXME
-  (pushnew 'com.gigamonkeys.json:parse-json *json-readers*))
+  (pushnew (cons :com.gigamonkeys.json 'com.gigamonkeys.json:parse-json)
+	   *json-reader-alist*))
