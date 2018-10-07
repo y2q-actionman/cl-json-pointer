@@ -16,7 +16,8 @@
 	     (:file "interface")
 	     (:file "support_com-gigamonkeys-json")
 	     (:file "support_jsown")
-	     (:file "support_json-streams")))))
+	     (:file "support_json-streams")
+	     (:file "support_jonathan")))))
 
 ;;; st-json support
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -56,10 +57,9 @@
 	       #:cl-json-pointer/st-json-support
 	       #:yason
 	       #:jsown
+	       #:jonathan ; I surprised this lib has 8 dependencies.
 	       #:json-streams
 	       #:com.gigamonkeys.json
-	       ;; json libs
-	       ;; #:jonathan ; I surprised this lib has 8 dependencies.
 	       ;; Not supported
 	       ;; #:define-json-expander #:json-mop
 	       )

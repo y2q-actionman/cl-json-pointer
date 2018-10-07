@@ -35,6 +35,11 @@
 ;;; jsown
 (push-json-reader-alist :jsown 'jsown:parse)
 
+;;; jonathan
+(push-json-reader-alist :jonathan 'jonathan:parse)
+
+;; TODO: `:as' variants: alist, array, hash-table
+
 ;;; json-streams
 (push-json-reader-alist :json-streams 'json-streams:json-parse)
 
