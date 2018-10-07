@@ -35,6 +35,5 @@
 (define-setf-expander get (obj pointer &key (type '*json-object-type*) &environment env)
   (get-setf-expansion `(get-by-json-pointer ,obj ,pointer :type ,type) env))
 
-;;; FIXME: add keyword param
-(defmacro update (obj pointer value &key (type t))
-  `(update-by-json-pointer ,obj ,pointer ,value))
+(defmacro update (obj pointer value &rest keyargs)
+  `(update-by-json-pointer ,obj ,pointer ,value ,@keyargs))

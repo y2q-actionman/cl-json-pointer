@@ -24,19 +24,19 @@
 	 (values nil nil
 		 (thunk-lambda
 		   (bad-deleter-error obj rtoken))))
-	((read-reference-token-as-index rtoken nil)
-	 (values nil nil
-		 (lambda (x)
-		   (let* ((tmp nil)
-			  (internal-setter
-			   (nth-value 2 (traverse-by-reference-token
-					 :list nil rtoken set-method
-					 (lambda (x)
-					   (setf tmp x))))))
-		     (funcall internal-setter x) ; `tmp' gains the newly created list.
-		     (push :array tmp)
-		     (funcall next-setter tmp)))))
 	(t
-	 (values nil nil
-		 (chained-setter-lambda (x) (next-setter)
-		   `(:object (,rtoken . ,x)))))))
+	 (if-let ((index (read-reference-token-as-index rtoken nil)))
+	   (values nil nil
+		   (lambda (x)
+		     (let* ((tmp nil)
+			    (internal-setter
+			     (nth-value 2 (traverse-by-reference-token
+					   :list nil index set-method
+					   (lambda (x)
+					     (setf tmp x))))))
+		       (funcall internal-setter x) ; `tmp' gains the newly created list.
+		       (push :array tmp)
+		       (funcall next-setter tmp))))
+	   (values nil nil
+		   (chained-setter-lambda (x) (next-setter)
+		     `(:object (,rtoken . ,x))))))))

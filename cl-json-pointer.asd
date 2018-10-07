@@ -16,7 +16,7 @@
 	     (:file "interface")
 	     (:file "support_com-gigamonkeys-json")
 	     (:file "support_jsown")
-	     (:file "support_json-streams.lisp")))))
+	     (:file "support_json-streams")))))
 
 ;;; st-json support
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -55,6 +55,7 @@
 	       #:cl-json
 	       #:cl-json-pointer/st-json-support
 	       #:yason
+	       #:jsown
 	       #:json-streams
 	       #:com.gigamonkeys.json
 	       ;; json libs
