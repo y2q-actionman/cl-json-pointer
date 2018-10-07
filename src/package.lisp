@@ -12,6 +12,7 @@
   (:export
    #:json-pointer-error
    #:*json-object-type*
+   #:*cl-json-pointer-supported-json-flavors*
    #:parse-json-pointer
    #:get-by-json-pointer
    #:exists-p-by-json-pointer

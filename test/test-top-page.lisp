@@ -32,4 +32,5 @@
   t)
 
 (1am:test test-top-page-runner
-  (1am:is (test-top-page)))
+  (with-current-json-reader ('cl-json:decode-json-from-string)
+    (1am:is (test-top-page))))

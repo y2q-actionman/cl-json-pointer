@@ -66,10 +66,16 @@
 		   'hoge-value))))
 
 (1am:test test0-traverse-json-3 ()
-  (let ((obj '((:a . 1) (:b . 2))))
+  (let ((obj (read-json-string #{ "a": 1, "b": 2} )))
     (1am:is (equal (get-by-json-pointer obj "/a") 1))
     (1am:is (equal (get-by-json-pointer obj "/b") 2))
     (let ((setf-ed-obj obj))
-      (setf (get-by-json-pointer setf-ed-obj "/c") 3) ; This `setf' updates `setf-ed-obj' itself.
-      (1am:is (not (equal obj setf-ed-obj)))
+      (setf (get-by-json-pointer setf-ed-obj "/c") 3)
+      ;; some flavors which directly uses lists may update `setf-ed-obj'
+      (when (member *current-json-reader*
+		    '(read-json-string/cl-json-crafted
+		      cl-json:decode-json-from-string
+		      jonathan:parse
+		      com.gigamonkeys.json:parse-json))
+	(1am:is (not (equal obj setf-ed-obj))))
       (1am:is (equal (get-by-json-pointer setf-ed-obj "/c") 3)))))

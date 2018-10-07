@@ -6,29 +6,32 @@
   ;; I don't want to treat string as an array.
   "If this is T, cl-json-pointer trests string as atom.")
 
-(defvar *traverse-nil-set-to-last-method* :list
+(defvar *traverse-nil-set-to-last-method* nil
   "Determines how to set to the last (by '-') of NIL.
+- `:nil' :: (Default) treated as `:list'.
 - `:list' :: pushes <value> as an ordinal list.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
 - `:array' :: makes a new array contains <value>.
 ")
 
-(defvar *traverse-nil-set-to-index-method* :list
+(defvar *traverse-nil-set-to-index-method* nil
   "Determines how to set to NIL by an index.
+- `:nil' :: (Default) treated as `:list'.
 - `:list' :: makes a new list and set <value> into nth point.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
 - `:error' :: throws an error.
 ")
 
-(defvar *traverse-nil-set-to-name-method* :alist
+(defvar *traverse-nil-set-to-name-method* nil
   "Determines how to set to NIL by a name.
+- `:nil' :: (Default) treated as `:alist'.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
 ")
 
-(defvar *traverse-object-like-kinds* '(:alist))
+(defvar *traverse-object-like-kinds* '(:alist :plist))
 
 ;;; Tools
 
@@ -291,11 +294,11 @@ closure can be used as a setter.
 	     (let* ((index (read-reference-token-as-index rtoken nil))
 		    (nil-method
 		     (cond ((eq index +end+)
-			    *traverse-nil-set-to-last-method*)
+			    (or *traverse-nil-set-to-last-method* :list))
 			   ((integerp index)
-			    *traverse-nil-set-to-index-method*)
+			    (or *traverse-nil-set-to-index-method* :list))
 			   (t
-			    *traverse-nil-set-to-name-method*))))
+			    (or *traverse-nil-set-to-name-method* :alist)))))
 	       (ecase nil-method
 		 ((:list :alist :plist)
 		  (nth-value 2 (traverse-by-reference-token
@@ -429,8 +432,8 @@ the referred object, existence (boolean), and a closure can be used as a setter.
 - `:add' :: If changing a list, makes a new list containing the set'ed value. (non-list objs are still modified).
 - `:remove' :: If deleting form a list, makes a new list not containing the removed value. (non-list objs are still modified).
 
-`obj-type' is a keyword specifies JSON object flavour. `:jsown' or
-`:com.gigamonkeys.json' has special effects.
+`obj-type' is a keyword specifies the JSON object flavors.
+See `*cl-json-pointer-supported-json-flavors*'
 "
   (let ((value obj)
 	(exists? t)

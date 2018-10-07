@@ -14,10 +14,7 @@
 	     (:file "parser")
 	     (:file "traversal")
 	     (:file "interface")
-	     (:file "support_com-gigamonkeys-json")
-	     (:file "support_jsown")
-	     (:file "support_json-streams")
-	     (:file "support_jonathan")))))
+	     (:file "support_library")))))
 
 ;;; st-json support
 (eval-when (:compile-toplevel :load-toplevel :execute)

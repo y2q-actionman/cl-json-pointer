@@ -17,7 +17,7 @@
 (unless *current-json-reader*
   (setf *current-json-reader* 'read-json-string/cl-json-crafted))
 
-(push-json-reader-alist t 'cl-json:decode-json-from-string)
+(push-json-reader-alist t 'read-json-string/cl-json-crafted)
 (push-json-reader-alist :cl-json 'cl-json:decode-json-from-string)
 
 ;;; st-json

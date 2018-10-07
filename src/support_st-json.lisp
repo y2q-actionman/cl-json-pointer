@@ -19,3 +19,5 @@
 				       (lambda (x)
 					 (setf (st-json::jso-alist obj) x))))))
 		   (funcall alist-setter))))))))
+
+(pushnew :st-json *cl-json-pointer-supported-json-flavors*)

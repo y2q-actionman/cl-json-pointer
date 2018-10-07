@@ -13,7 +13,7 @@
   (let ((obj nil))
     (setf (cljsp:get obj "") 'foo) 
     (1am:is (eq obj 'foo)))
-  (let ((obj (acons :existing "bla" nil)))
+  (let ((obj (read-json-string #{ "existing": "bla"} )))
     (setf (cljsp:get obj "/new-value/bla") :expected)
     (1am:is (eql (cljsp:get obj "/new-value/bla") :expected))
     (setf (cljsp:get obj "/first-level") :expected)
