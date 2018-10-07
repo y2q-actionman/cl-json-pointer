@@ -31,10 +31,6 @@
 
 (defvar *traverse-object-like-kinds* '(:alist))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (when (find-package :com.gigamonkeys.json)
-    (pushnew :plist *traverse-object-like-kinds*)))
-
 ;;; Tools
 
 (defmacro chained-setter-lambda
@@ -230,45 +226,47 @@ closure can be used as a setter.
   (declare (ignore obj-type))
   (traverse-by-reference-token :list obj rtoken set-method next-setter))
 
-(defmethod traverse-by-reference-token (obj-type (obj list) (rtoken string) set-method next-setter)
-  (let* ((kinds *traverse-object-like-kinds*)
-	 (try-result-alist nil))
-    ;; `rtoken' may be ambiguous with an index or a name of object fields.
-    ;; 
-    ;; 1. Try to use it as an existed field name.
-    ;; FIXME: This loop is too heavy! (but I think it is required..)
-    (loop for kind in kinds
-       as ret =
-	 (handler-case
-	     (multiple-value-list
-	      (traverse-by-reference-token kind obj rtoken set-method next-setter))
-	   (error () nil))
-       if (second ret)			; exists?
-       do (return-from traverse-by-reference-token
-	    (values-list ret))
-       else
-       do (push (cons kind ret) try-result-alist)
-       finally (nreversef try-result-alist))
+(defmethod traverse-by-reference-token (obj-type (obj list) (rtoken integer) set-method next-setter)
+  (declare (ignore obj-type))
+  (traverse-by-reference-token :list obj rtoken set-method next-setter))
+
+(defun list-try-traverse (kinds list rtoken set-method next-setter)
+  ;; `rtoken' may be ambiguous with an index or a name of object fields.
+  ;; 
+  ;; 1. Try to use it as an existed field name.
+  ;; FIXME: This loop is too heavy! (but I think it is required..)
+  (let ((try-result-alist
+	 (loop for kind in kinds
+	    as ret =
+	      (handler-case
+		  (multiple-value-list
+		   (traverse-by-reference-token kind list rtoken set-method next-setter))
+		(error () nil))
+	    if (second ret)		; exists?
+	    do (return-from list-try-traverse
+		 (values-list ret))
+	    else
+	    collect (cons kind ret))))
     ;; `rtoken' is not a name of object fields.
     ;;
     ;; 2. If it can be read as an index, I treat `obj' as an ordinal list.
     (multiple-value-bind (index bad-index-condition)
 	(read-reference-token-as-index rtoken nil)
       (when index			; yes, an ordinal list!
-	(return-from traverse-by-reference-token
-	  (traverse-by-reference-token :list obj rtoken set-method next-setter)))
+	(return-from list-try-traverse
+	  (traverse-by-reference-token :list list rtoken set-method next-setter)))
       (when (typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
 	(error bad-index-condition)))
     ;; 3. `rtoken' assumed as a field name, but not found.
     ;; 3-1. use the specified default.
     (when-let* ((default (assoc *traverse-nil-set-to-name-method* try-result-alist))
 		(default-setter (third (cdr default))))
-      (return-from traverse-by-reference-token
+      (return-from list-try-traverse
 	(values nil nil default-setter)))
     ;; 3-2. use a found one.
     (loop for (nil nil nil setter) in try-result-alist
        when setter
-       return (return-from traverse-by-reference-token
+       return (return-from list-try-traverse
 		(values nil nil setter)))
     ;; 3-3. no way...
     (values nil nil
@@ -276,7 +274,11 @@ closure can be used as a setter.
 		(thunk-lambda
 		  (error 'json-pointer-not-found-error
 			 :format-control "There is no way to set to ~A (rtoken ~A)"
-			 :format-arguments (list obj rtoken)))))))
+			 :format-arguments (list list rtoken)))))))
+
+(defmethod traverse-by-reference-token (obj-type (obj list) (rtoken string) set-method next-setter)
+  (list-try-traverse *traverse-object-like-kinds*
+		     obj rtoken set-method next-setter))
 
 (defmethod traverse-by-reference-token (obj-type (obj null) rtoken set-method next-setter)
   ;; empty. this is problematic for setting.

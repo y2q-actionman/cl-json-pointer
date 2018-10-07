@@ -13,7 +13,8 @@
 	     (:file "condition")
 	     (:file "parser")
 	     (:file "traversal")
-	     (:file "interface")))))
+	     (:file "interface")
+	     (:file "com-gigamonkeys-json-support")))))
 
 ;;; st-json support
 (eval-when (:compile-toplevel :load-toplevel :execute)

@@ -59,11 +59,14 @@
   `(let* ((*current-json-reader* ,func)
 	  (*current-array-type* (type-of (read-json-string +array-type-check+)))
 	  (*current-object-type* (type-of (read-json-string +object-type-check+)))
+	  (*json-object-type*
+	   (case *current-json-reader*
+	     (com.gigamonkeys.json:parse-json :com.gigamonkeys.json)
+	     (t *json-object-type*)))
 	  ;; TODO: FIXME: cleanup
 	  (cl-json-pointer::*traverse-nil-set-to-name-method*
 	   (case *current-json-reader*
 	     (jsown:parse :jsown)
-	     (com.gigamonkeys.json:parse-json :plist)
 	     (otherwise
 	      cl-json-pointer::*traverse-nil-set-to-name-method*))))
      ,@body))
@@ -71,8 +74,8 @@
 (defun run (&optional (readers *json-readers*))	; test entry point
   (loop for func in readers
      do (with-current-json-reader (func)
-	  (format t "~&testing on ~A:~A~& (JSON array = ~A, JSON object = ~A)~%"
+	  (format t "~&testing on ~A:~A~& (JSON ~A, JSON array = ~A, JSON object = ~A)~%"
 		  (package-name (symbol-package *current-json-reader*))
 		  *current-json-reader*
-		  *current-array-type* *current-object-type*)
+		  *json-object-type* *current-array-type* *current-object-type*)
 	  (1am:run))))
