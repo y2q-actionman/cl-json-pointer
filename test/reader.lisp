@@ -1,5 +1,10 @@
 (in-package :cl-json-pointer/test)
 
+(defmacro push-json-reader-alist (keyword function)
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (pushnew (cons ,keyword ,function)
+	      *json-reader-alist* :test #'equal)))
+
 ;;; cl-json
 ;; TODO: use fluid-object 
 
@@ -12,23 +17,14 @@
 (unless *current-json-reader*
   (setf *current-json-reader* 'read-json-string/cl-json-crafted))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew (cons t 'cl-json:decode-json-from-string)
-	   *json-reader-alist*)
-  (pushnew (cons :cl-json 'cl-json:decode-json-from-string)
-	   *json-reader-alist*))
+(push-json-reader-alist t 'cl-json:decode-json-from-string)
+(push-json-reader-alist :cl-json 'cl-json:decode-json-from-string)
 
 ;;; st-json
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew (cons :st-json 'st-json:read-json-from-string)
-	   *json-reader-alist*))
+(push-json-reader-alist :st-json 'st-json:read-json-from-string)
 
 ;;; yason
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew (cons :yason 'yason:parse)
-	   *json-reader-alist*))
+(push-json-reader-alist :yason 'yason:parse)
 
 ;; TODO: use variables
 ;; (*parse-json-arrays-as-vectors*)
@@ -37,13 +33,16 @@
 ;; (*parse-object-key-fn*)
 
 ;;; jsown
+(push-json-reader-alist :jsown 'jsown:parse)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew (cons :jsown 'jsown:parse)
-	   *json-reader-alist*))
+;;; json-streams
+(push-json-reader-alist :json-streams 'json-streams:json-parse)
+
+(defmacro json-streams-array-pop-prefix (js-array)
+  `(when (eq *current-json-reader* 'json-streams:json-parse)
+     (check-type ,js-array list)
+     (assert (eq (pop ,js-array) :array))))
 
 ;;; com.gigamonkeys.json
+(push-json-reader-alist :com.gigamonkeys.json 'com.gigamonkeys.json:parse-json)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew (cons :com.gigamonkeys.json 'com.gigamonkeys.json:parse-json)
-	   *json-reader-alist*))

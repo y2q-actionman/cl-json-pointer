@@ -55,15 +55,20 @@
 			 (error "Unexpected type ~A for 'current-json-reader-etypecase'"
 				,current-type)))))))
 
-(defmacro with-current-json-reader ((func) &body body)
-  `(let* ((*current-json-reader* ,func)
-	  (*current-array-type* (type-of (read-json-string +array-type-check+)))
-	  (*current-object-type* (type-of (read-json-string +object-type-check+)))
-	  (*json-object-type*
-	   (if-let ((type (rassoc ,func *json-reader-alist*)))
-	     (car type)
-	     *json-reader-alist*)))
-     ,@body))
+(defmacro with-current-json-reader ((func_) &body body)
+  (let ((func (gensym)))
+    `(let* ((,func ,func_)
+	    (,func (if (keywordp ,func)
+		       (cdr (assoc ,func *json-reader-alist*))
+		       ,func))
+	    (*current-json-reader* ,func)
+	    (*current-array-type* (type-of (read-json-string +array-type-check+)))
+	    (*current-object-type* (type-of (read-json-string +object-type-check+)))
+	    (*json-object-type*
+	     (if-let ((type (rassoc ,func *json-reader-alist*)))
+	       (car type)
+	       *json-reader-alist*)))
+       ,@body)))
 
 (defun run (&optional (reader-alist *json-reader-alist*))	; test entry point
   (loop for (nil . func) in reader-alist

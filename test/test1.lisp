@@ -25,15 +25,20 @@
     (1am:is (equal (get-by-json-pointer obj "/foo") 7))
 
     (setf obj (set-by-json-pointer obj "/qux/-" 6)) 
-    (1am:is (equalp (get-by-json-pointer obj "/qux")
-		    (current-json-reader-etypecase (*current-array-type*)
-		      (list '(3 4 5 6))
-		      (array #(3 4 5 6)))))
-    (setf obj (set-by-json-pointer obj "/qux/-" 99)) 
-    (1am:is (equalp (get-by-json-pointer obj "/qux")
-		    (current-json-reader-etypecase (*current-array-type*)
-		      (list '(3 4 5 6 99))
-		      (array #(3 4 5 6 99)))))
+    (let ((qux (get-by-json-pointer obj "/qux")))
+      (json-streams-array-pop-prefix qux)
+      (1am:is (equalp qux
+		      (current-json-reader-etypecase (*current-array-type*)
+			(list '(3 4 5 6))
+			(array #(3 4 5 6))))))
+    
+    (setf obj (set-by-json-pointer obj "/qux/-" 99))
+    (let ((qux (get-by-json-pointer obj "/qux")))
+      (json-streams-array-pop-prefix qux)
+      (1am:is (equalp qux 
+		      (current-json-reader-etypecase (*current-array-type*)
+			(list '(3 4 5 6 99))
+			(array #(3 4 5 6 99))))))
 
     (let ((pointer (parse-json-pointer "/foo")))
       (1am:is (equal (get-by-json-pointer obj pointer) 7))
@@ -82,6 +87,7 @@
     (let ((arr (cljsp:get obj  "/f/g/h/foo")))
       ;; TODO: add a way to specify type.
       ;; (1am:is (typep arr 'array))
+      (json-streams-array-pop-prefix arr)
       (1am:is (equal (elt arr 0) "test")))
 
     ;; can set `null` as a value
@@ -153,7 +159,9 @@
     (1am:signals cl-json-pointer:json-pointer-error
       (cljsp:get ary "/01"))
     (cljsp:update ary "/-" "three")
-    (1am:is (equal (elt ary 3) "three"))))
+    (let ((ary ary))
+      (json-streams-array-pop-prefix ary)
+      (1am:is (equal (elt ary 3) "three")))))
 
 
 (define-constant +test1-example+
@@ -176,6 +184,7 @@
     (1am:is (equal (cljsp:get example "") example))
 
     (let ((ans (cljsp:get example "/foo")))
+      (json-streams-array-pop-prefix ans)
       (1am:is (equal (length ans) 2))
       (1am:is (equal (elt ans 0) "bar"))
       (1am:is (equal (elt ans 1) "baz")))

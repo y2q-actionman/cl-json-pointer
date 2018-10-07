@@ -14,8 +14,9 @@
 	     (:file "parser")
 	     (:file "traversal")
 	     (:file "interface")
-	     (:file "com-gigamonkeys-json-support")
-	     (:file "jsown-support")))))
+	     (:file "support_com-gigamonkeys-json")
+	     (:file "support_jsown")
+	     (:file "support_json-streams.lisp")))))
 
 ;;; st-json support
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -26,7 +27,7 @@
   :licence "MIT"
   :depends-on (#:cl-json-pointer/core #:st-json)
   :components
-  ((:module "src" :components ((:file "st-json-support")))))
+  ((:module "src" :components ((:file "support_st-json")))))
 
 ;;; The main defsystem.
 (asdf:defsystem #:cl-json-pointer
@@ -48,14 +49,16 @@
   :licence "MIT"
   :depends-on (#:cl-json-pointer
 	       #:cl-json-pointer/synonyms
-	       ;; All Json libs and platform supports
-	       #:cl-json #:yason #:com.gigamonkeys.json #:jsown
-	       #:cl-json-pointer/st-json-support
 	       ;; test libs
 	       #:named-readtables #:1am
+	       ;; All Json libs and platform supports
+	       #:cl-json
+	       #:cl-json-pointer/st-json-support
+	       #:yason
+	       #:json-streams
+	       #:com.gigamonkeys.json
 	       ;; json libs
 	       ;; #:jonathan ; I surprised this lib has 8 dependencies.
-	       ;; #:json-streams
 	       ;; Not supported
 	       ;; #:define-json-expander #:json-mop
 	       )
