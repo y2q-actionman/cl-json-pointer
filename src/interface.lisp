@@ -49,5 +49,8 @@ calls this for making a setter function."
 		 ,store)
 	      `(get-by-json-pointer ,o-getter ,p-tmp :type ,type-tmp)))))
 
-(define-modify-macro update-by-json-pointer (pointer value &rest args)
+(define-modify-macro update-by-json-pointer (pointer value &rest keyargs)
   set-by-json-pointer)
+
+(define-modify-macro deletef-by-json-pointer (pointer &rest keyargs)
+  delete-by-json-pointer)

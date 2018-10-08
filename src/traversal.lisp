@@ -236,19 +236,22 @@ closure can be used as a setter.
   ;; `rtoken' may be ambiguous with an index or a name of object fields.
   ;; 
   ;; 1. Try to use it as an existed field name.
-  ;; FIXME: This loop is too heavy! (but I think it is required..)
-  (let ((try-result-alist
-	 (loop for kind in kinds
-	    as ret =
-	      (handler-case
-		  (multiple-value-list
-		   (traverse-by-reference-token kind list rtoken set-method next-setter))
-		(error () nil))
-	    if (second ret)		; exists?
-	    do (return-from list-try-traverse
-		 (values-list ret))
-	    else
-	    collect (cons kind ret))))
+  ;; FIXME: This loop is too heavy! (but I think this is required..)
+  (let* ((set-to-nil-kind-default nil)
+	 (try-results
+	  (loop for kind in kinds
+	     as ret =
+	       (handler-case
+		   (multiple-value-list
+		    (traverse-by-reference-token kind list rtoken set-method next-setter))
+		 (error () nil))
+	     if (second ret)		; exists?
+	     do (return-from list-try-traverse
+		  (values-list ret))
+	     else if (eq kind *traverse-nil-set-to-name-method*)
+	     do (setf set-to-nil-kind-default ret)
+	     else
+	     collect ret)))
     ;; `rtoken' is not a name of object fields.
     ;;
     ;; 2. If it can be read as an index, I treat `obj' as an ordinal list.
@@ -261,15 +264,15 @@ closure can be used as a setter.
 	(error bad-index-condition)))
     ;; 3. `rtoken' assumed as a field name, but not found.
     ;; 3-1. use the specified default.
-    (when-let* ((default (assoc *traverse-nil-set-to-name-method* try-result-alist))
-		(default-setter (third (cdr default))))
+    (when (and set-to-nil-kind-default
+	       (third set-to-nil-kind-default))
       (return-from list-try-traverse
-	(values nil nil default-setter)))
+	(values-list set-to-nil-kind-default)))
     ;; 3-2. use a found one.
-    (loop for (nil nil nil setter) in try-result-alist
-       when setter
+    (loop for ret in try-results
+       when (third ret)
        return (return-from list-try-traverse
-		(values nil nil setter)))
+		(values-list ret)))
     ;; 3-3. no way...
     (values nil nil
 	    (if set-method

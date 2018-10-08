@@ -5,7 +5,7 @@
   (:shadow #:get #:set #:delete #:remove)
   (:export
    #:json-pointer-error
-   #:parse #:get #:exists-p #:set #:add #:delete #:remove #:update))
+   #:parse #:get #:exists-p #:set #:add #:delete #:remove #:update #:deletef))
 
 (in-package :cl-json-pointer/synonyms)
 
@@ -14,26 +14,29 @@
 (defun parse (obj &rest args &key &allow-other-keys)
   (apply #'parse-json-pointer obj args))
 
-(defun get (obj pointer &key (type *json-object-type*))
-  (get-by-json-pointer obj pointer :type type))
+(defun get (obj pointer &rest args &key &allow-other-keys)
+  (apply #'get-by-json-pointer obj pointer args))
 
-(defun exists-p (obj pointer &key (type *json-object-type*))
-  (exists-p-by-json-pointer obj pointer :type type))
+(defun exists-p (obj pointer &rest args &key &allow-other-keys)
+  (apply #'exists-p-by-json-pointer obj pointer args))
 
-(defun set (obj pointer value &key (type *json-object-type*))
-  (set-by-json-pointer obj pointer value :type type))
+(defun set (obj pointer value &rest args &key &allow-other-keys)
+  (apply #'set-by-json-pointer obj pointer value args))
 
-(defun add (obj pointer value &key (type *json-object-type*))
-  (add-by-json-pointer obj pointer value :type type))
+(defun add (obj pointer value &rest args &key &allow-other-keys)
+  (apply #'add-by-json-pointer obj pointer value args))
 
-(defun delete (obj pointer &key (type *json-object-type*))
-  (delete-by-json-pointer obj pointer :type type))
+(defun delete (obj pointer &rest args &key &allow-other-keys)
+  (apply #'delete-by-json-pointer obj pointer args))
 
-(defun remove (obj pointer &key (type *json-object-type*))
-  (remove-by-json-pointer obj pointer :type type))
+(defun remove (obj pointer &rest args &key &allow-other-keys)
+  (apply #'remove-by-json-pointer obj pointer args))
 
-(define-setf-expander get (obj pointer &key (type '*json-object-type*) &environment env)
-  (get-setf-expansion `(get-by-json-pointer ,obj ,pointer :type ,type) env))
+(define-setf-expander get (obj pointer &rest args &key &allow-other-keys &environment env)
+  (get-setf-expansion `(get-by-json-pointer ,obj ,pointer ,@args) env))
 
 (defmacro update (obj pointer value &rest keyargs)
   `(update-by-json-pointer ,obj ,pointer ,value ,@keyargs))
+
+(defmacro deletef (obj pointer &rest keyargs)
+  `(deletef-by-json-pointer ,obj ,pointer ,@keyargs))

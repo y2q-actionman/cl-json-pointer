@@ -46,23 +46,22 @@ https://github.com/WHenderson/json-pointer-rfc6901
 
 - read test code
 
-* TODO common lisp json lib 対応
+* DONE common lisp json lib 対応
  https://sites.google.com/site/sabraonthehill/home/json-libraries
 
 - [X] cl-json
 - [X] st-json
 - [X] yason
-- [ ] jsown
-- [ ] jonathan
-- [ ] json-streams
-- [ ] comgigamonkeys.json
+- [X] jsown
+- [X] jonathan
+- [X] json-streams
+- [X] comgigamonkeys.json
 
 * TODO : json query
 
 - https://github.com/sagold/json-query
 
-
-* TODO 深く考えずに condition なげまくるか？
+* DONE 深く考えずに condition なげまくるか？(しない)
 
 - get -> 経路がなければ error なげる。値 nil が返されるなら、それは nil があったということ。
 - exists -> 上と同じだが、 muffle-warning する。
@@ -71,9 +70,7 @@ https://github.com/WHenderson/json-pointer-rfc6901
 よく考えたら、 get の時の戻り値は set では使わない。
 なので、何を返すかを完全に set-method で決める？
 
-
-
-* TODO alist の key に数値があったらどうするのか問題
+=list-try-traverse= で exists を使ったりしてるので、たぶんあった方がいい。
 
 
 * DONE setter, deleter は修正後objectを返す
@@ -92,6 +89,7 @@ cons を扱っていて、これだと複数回呼んでも意味がなさそう
 に掴ませるかという設定の話になるが。
 
 
+* TODO alist の key に数値があったらどうするのか問題
 
 * TODO alist の key を intern する方法
 
@@ -99,7 +97,7 @@ cons を扱っていて、これだと複数回呼んでも意味がなさそう
 
 - reference token として symbol や int を受け入れる
 - parser が解決済みの値を返すか、それとも今のように曖昧な string として判断を遅延させるか。
-* TODO deletef 的なものを足す。
+* DONE deletef 的なものを足す。
   test4 で使える。
 
 * TODO access を使う。

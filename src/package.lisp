@@ -20,4 +20,5 @@
    #:add-by-json-pointer
    #:delete-by-json-pointer
    #:remove-by-json-pointer
-   #:update-by-json-pointer))
+   #:update-by-json-pointer
+   #:deletef-by-json-pointer))

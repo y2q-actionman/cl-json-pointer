@@ -77,16 +77,16 @@
 
 (1am:test test4-delete
   (let ((obj #{}))
-    (setf obj (cljsp:delete obj ""))
+    (cljsp:deletef obj "")
     (1am:is (eql obj nil)))
   (let ((obj (read-json-string
   	      #{ "a": 1 })))
-    (setf obj (cljsp:delete obj "/a"))
+    (cljsp:deletef obj "/a")
     (1am:is (cljsp:exists-p obj ""))
     (1am:is (not (cljsp:exists-p obj "/a"))))
   (let ((obj (read-json-string
   	      #{ "a": { "b": { "c": 1 } } })))
-    (setf obj (cljsp:delete obj "/a/b/c"))
+    (cljsp:deletef obj "/a/b/c")
     (1am:is (cljsp:exists-p obj ""))
     (1am:is (cljsp:exists-p obj "/a"))
     (1am:is (cljsp:exists-p obj "/a/b"))
@@ -97,14 +97,14 @@
       (cljsp:delete obj "/b")))
   (let ((obj (read-json-string
   	      #[ 1 ])))
-    (setf obj (cljsp:delete obj "/0"))
+    (cljsp:deletef obj "/0")
     (1am:is (cljsp:exists-p obj ""))	; the root always exists.
     (current-json-reader-etypecase (*current-array-type*)
       (list (1am:is (not (cljsp:exists-p obj "/0"))))
       (array (1am:is (null (cljsp:get obj "/0"))))))
   (let ((obj (read-json-string
 	      #[[[1]]])))
-    (setf obj (cljsp:delete obj "/0/0/0"))
+    (cljsp:deletef obj "/0/0/0")
     (1am:is (cljsp:exists-p obj ""))
     (1am:is (cljsp:exists-p obj "/0"))
     (1am:is (cljsp:exists-p obj "/0/0"))
