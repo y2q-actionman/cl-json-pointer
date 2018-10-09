@@ -2,9 +2,7 @@
 
 JSON Pointer, defined in [RFC6901](https://tools.ietf.org/html/rfc6901), processor for Common Lisp.
 
-Aiming to:
-* Independent from any JSON libraries (as much as possible).
-* Usable for built-in Lisp objects -- lists, arrays, CLOS objects, hash-tables, etc.
+This libary aims to be independent from any JSON libraries (as much as possible).
 
 # License
 
@@ -20,6 +18,17 @@ The MIT License. See LICENSE file.
 
 This library itself does not depend on any JSON libraries.
 You can work with your favorite one.
+
+Current supported json libs are:
+
+- cl-json
+- st-json
+- yason
+- jsown
+- jonathan (as `:plist` only)
+- json-streams
+- com.gigamonkeys.json
+
 
 ## Load
 

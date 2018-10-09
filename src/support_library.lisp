@@ -53,6 +53,7 @@
 
 (defmethod traverse-by-reference-token
     ((kind (eql :jonathan)) (obj null) rtoken set-method next-setter)
+  (declare (ignorable rtoken set-method next-setter))
   (let ((*traverse-nil-set-to-name-method* :plist)) ; default plist one.
     (call-next-method)))
 
@@ -111,5 +112,6 @@
 
 (defmethod traverse-by-reference-token
     ((kind (eql :com.gigamonkeys.json)) (obj null) rtoken set-method next-setter)
+  (declare (ignorable rtoken set-method next-setter))
   (let ((*traverse-nil-set-to-name-method* :plist))
     (call-next-method)))

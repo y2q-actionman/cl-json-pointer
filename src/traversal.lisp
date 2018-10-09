@@ -282,10 +282,12 @@ closure can be used as a setter.
 			 :format-arguments (list list rtoken)))))))
 
 (defmethod traverse-by-reference-token (obj-type (obj list) (rtoken string) set-method next-setter)
+  (declare (ignorable obj-type))
   (list-try-traverse *traverse-object-like-kinds*
 		     obj rtoken set-method next-setter))
 
 (defmethod traverse-by-reference-token (obj-type (obj null) rtoken set-method next-setter)
+  (declare (ignorable obj-type))
   ;; empty. this is problematic for setting.
   (values nil nil
 	  (ecase set-method

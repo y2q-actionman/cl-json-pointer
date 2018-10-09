@@ -91,12 +91,30 @@ cons を扱っていて、これだと複数回呼んでも意味がなさそう
 
 * TODO alist の key に数値があったらどうするのか問題
 
-* TODO alist の key を intern する方法
+alist の key に integer があった場合、現状だとマッチできない。
+
+ただ、 RFC 8259 によると、 JSON object の key は string 限定。なので、考慮する必要はほとんどない。
+(=access= 的なことをするのなら必要？)
+
+* TODO object の key を intern する方法
+
+見たところ、 Json lib によって:
+- string のままにする
+- keyword にする
+- case-sensitive に keyword にする。
+- cl-json のようにかっこよく keyword を作る。
+
+loose な string match を使うなら、 read については解決している。
+set の時の handler が必要。次項とも関連。
 
 * TODO user が書いた list を食えるようにする。
 
 - reference token として symbol や int を受け入れる
 - parser が解決済みの値を返すか、それとも今のように曖昧な string として判断を遅延させるか。
+
+これをやるなら、 =+end+= を別にしたい。
+
+
 * DONE deletef 的なものを足す。
   test4 で使える。
 

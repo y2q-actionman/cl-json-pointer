@@ -71,7 +71,8 @@
        ,@body)))
 
 (defun run (&optional (reader-alist *json-reader-alist*))	; test entry point
-  (loop for (nil . func) in reader-alist
+  (loop with shuffled = (alexandria:shuffle (copy-list reader-alist))
+     for (nil . func) in shuffled
      do (with-current-json-reader (func)
 	  (format t "~&testing on ~A:~A~& (JSON ~A, JSON array = ~A, JSON object = ~A)~%"
 		  (package-name (symbol-package *current-json-reader*))
