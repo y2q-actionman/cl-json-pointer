@@ -68,6 +68,17 @@
 			  (error-if-required 'json-pointer-bad-reference-token-not-numeric-error
 					     :reference-token rtoken))))))))))
 
+;;; object key
+
+(defgeneric intern-object-key (flavor rtoken)
+  (:documentation "Interns `rtoken' as JSON object key, with JSON lib flavor of `flavor'")
+  (:method ((flavor t) (rtoken symbol))
+    (declare (ignore obj-flavor))
+    rtoken)
+  (:method ((flavor t) (rtoken string))	; This case is ambigouns
+    (declare (ignore obj-flavor))
+    rtoken))
+
 ;;; Main traversal.
 
 (defgeneric traverse-by-reference-token (obj-type obj rtoken set-method next-setter)
