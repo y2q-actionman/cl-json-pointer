@@ -9,34 +9,30 @@
 
 (in-package :cl-json-pointer/synonyms)
 
-(declaim (inline parse get exists-p set add delete remove))
+(defmacro defsynonym-cljsp-func (name (func &rest required-args))
+  `(progn (declaim (inline ,name))
+	  (defun ,name (,@required-args &rest keyargs &key &allow-other-keys)
+	    (apply #',func ,@required-args keyargs))))
 
-(defun parse (obj &rest args &key &allow-other-keys)
-  (apply #'parse-json-pointer obj args))
+(defsynonym-cljsp-func parse (parse-json-pointer obj))
 
-(defun get (obj pointer &rest args &key &allow-other-keys)
-  (apply #'get-by-json-pointer obj pointer args))
+(defsynonym-cljsp-func get (get-by-json-pointer obj pointer))
 
-(defun exists-p (obj pointer &rest args &key &allow-other-keys)
-  (apply #'exists-p-by-json-pointer obj pointer args))
+(defsynonym-cljsp-func exists-p (exists-p-by-json-pointer obj pointer))
 
-(defun set (obj pointer value &rest args &key &allow-other-keys)
-  (apply #'set-by-json-pointer obj pointer value args))
+(defsynonym-cljsp-func set (set-by-json-pointer obj pointer value))
 
-(defun add (obj pointer value &rest args &key &allow-other-keys)
-  (apply #'add-by-json-pointer obj pointer value args))
+(defsynonym-cljsp-func add (add-by-json-pointer obj pointer value))
 
-(defun delete (obj pointer &rest args &key &allow-other-keys)
-  (apply #'delete-by-json-pointer obj pointer args))
+(defsynonym-cljsp-func delete (delete-by-json-pointer obj pointer))
 
-(defun remove (obj pointer &rest args &key &allow-other-keys)
-  (apply #'remove-by-json-pointer obj pointer args))
+(defsynonym-cljsp-func remove (remove-by-json-pointer obj pointer))
 
 (define-setf-expander get (obj pointer &rest args &key &allow-other-keys &environment env)
   (get-setf-expansion `(get-by-json-pointer ,obj ,pointer ,@args) env))
 
 (defmacro update (obj pointer value &rest keyargs)
   `(update-by-json-pointer ,obj ,pointer ,value ,@keyargs))
-
+ 
 (defmacro deletef (obj pointer &rest keyargs)
   `(deletef-by-json-pointer ,obj ,pointer ,@keyargs))
