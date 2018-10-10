@@ -16,21 +16,29 @@
 	     (:file "interface")
 	     (:file "support_library")))))
 
-;;; st-json support
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (when (find-package :st-json) ; If ST-JSON has been loaded, I load specific codes.
-    (pushnew :cl-json-pointer/st-json-support *features*)))
+;;; Some library support. 
+(asdf:defsystem #:cl-json-pointer/cl-json-support
+  :licence "MIT"
+  :depends-on (#:cl-json-pointer/core #:cl-json)
+  :components ((:module "src" :components ((:file "support_cl-json")))))
 
 (asdf:defsystem #:cl-json-pointer/st-json-support
   :licence "MIT"
   :depends-on (#:cl-json-pointer/core #:st-json)
-  :components
-  ((:module "src" :components ((:file "support_st-json")))))
+  :components ((:module "src" :components ((:file "support_st-json")))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-package :cl-json)
+    (pushnew :cl-json-pointer/cl-json-support *features*))
+  (when (find-package :st-json)
+    (pushnew :cl-json-pointer/st-json-support *features*)))
 
 ;;; The main defsystem.
 (asdf:defsystem #:cl-json-pointer
   :licence "MIT"
   :depends-on (#:cl-json-pointer/core
+	       (:feature :cl-json-pointer/cl-json-support
+			 #:cl-json-pointer/cl-json-support)
 	       (:feature :cl-json-pointer/st-json-support
 			 #:cl-json-pointer/st-json-support))
   :in-order-to ((asdf:test-op (asdf:test-op #:cl-json-pointer/test))))
@@ -50,7 +58,7 @@
 	       ;; test libs
 	       #:named-readtables #:1am
 	       ;; All Json libs and platform supports
-	       #:cl-json
+	       #:cl-json-pointer/cl-json-support
 	       #:cl-json-pointer/st-json-support
 	       #:yason
 	       #:jsown

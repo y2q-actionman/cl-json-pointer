@@ -73,10 +73,12 @@
 (defgeneric intern-object-key (flavor rtoken)
   (:documentation "Interns `rtoken' as JSON object key, with JSON lib flavor of `flavor'")
   (:method ((flavor t) (rtoken symbol))
-    (declare (ignore obj-flavor))
+    (declare (ignore flavor))
     rtoken)
   (:method ((flavor t) (rtoken string))	; This case is ambigouns
-    (declare (ignore obj-flavor))
+    "Interns `rtoken' itself as JSON object key.
+This is suitable for yason, st-json, jsown, json-streams, and com.gigamonkeys.json."
+    (declare (ignore flavor))
     rtoken))
 
 ;;; Main traversal.

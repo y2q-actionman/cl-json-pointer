@@ -3,24 +3,15 @@
 ;;; FIXME: merge name -- json type? flavor?
 (defvar *cl-json-pointer-supported-json-flavors* nil)
 
-
-;;; cl-json
-;;; most generic. cl-json-pointer based on this.
-(pushnew :cl-json *cl-json-pointer-supported-json-flavors*)
-
-
 ;;; yason
-(pushnew :yason *cl-json-pointer-supported-json-flavors*)
-
 (defmethod traverse-by-reference-token
     ((kind (eql :yason)) (obj list) (rtoken string) set-method next-setter)
   ;; An optimization -- don't consider plist.
   (list-try-traverse '(:alist) obj rtoken set-method next-setter))
 
+(pushnew :yason *cl-json-pointer-supported-json-flavors*)
 
 ;;; jsown
-(pushnew :jsown *cl-json-pointer-supported-json-flavors*)
-
 (defmethod traverse-by-reference-token ((kind (eql :jsown)) (obj list)
 					(rtoken string) set-method next-setter)
   (if (eq (car obj) :OBJ)
@@ -46,21 +37,22 @@
 		    (chained-setter-lambda (x) (next-setter)
 		      `(:OBJ (,rtoken . ,x)))))))))
 
+(pushnew :jsown *cl-json-pointer-supported-json-flavors*)
 
 ;;; jonathan
 ;;; TODO: support `:as' flavors
-(pushnew :jonathan *cl-json-pointer-supported-json-flavors*)
-
 (defmethod traverse-by-reference-token
     ((kind (eql :jonathan)) (obj null) rtoken set-method next-setter)
   (declare (ignorable rtoken set-method next-setter))
   (let ((*traverse-nil-set-to-name-method* :plist)) ; default plist one.
     (call-next-method)))
 
+(defmethod intern-object-key ((flavor (eql :jonathan)) rtoken)
+  (intern rtoken (find-package :keyword)))
+
+(pushnew :jonathan *cl-json-pointer-supported-json-flavors*)
 
 ;;; json-streams
-(pushnew :json-streams *cl-json-pointer-supported-json-flavors*)
-
 (defmethod traverse-by-reference-token ((kind (eql :json-streams)) (obj list)
 					(rtoken string) set-method next-setter)
   (case (car obj)
@@ -101,10 +93,9 @@
 		   (chained-setter-lambda (x) (next-setter)
 		     `(:object (,rtoken . ,x))))))))
 
+(pushnew :json-streams *cl-json-pointer-supported-json-flavors*)
 
 ;;; com.gigamonkeys.json
-(pushnew :com.gigamonkeys.json *cl-json-pointer-supported-json-flavors*)
-
 (defmethod traverse-by-reference-token
     ((kind (eql :com.gigamonkeys.json)) (obj list) (rtoken string) set-method next-setter)
   ;; An optimization -- don't consider alist.
@@ -115,3 +106,5 @@
   (declare (ignorable rtoken set-method next-setter))
   (let ((*traverse-nil-set-to-name-method* :plist))
     (call-next-method)))
+
+(pushnew :com.gigamonkeys.json *cl-json-pointer-supported-json-flavors*)
