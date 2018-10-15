@@ -96,7 +96,7 @@ alist の key に integer があった場合、現状だとマッチできない
 ただ、 RFC 8259 によると、 JSON object の key は string 限定。なので、考慮する必要はほとんどない。
 (=access= 的なことをするのなら必要？)
 
-* TODO object の key を intern する方法
+* DONE object の key を intern する方法
 
 見たところ、 Json lib によって:
 - string のままにする
@@ -106,6 +106,8 @@ alist の key に integer があった場合、現状だとマッチできない
 
 loose な string match を使うなら、 read については解決している。
 set の時の handler が必要。次項とも関連。
+
+=intern-object-key= によって拾うことにした。
 
 * TODO user が書いた list を食えるようにする。
 

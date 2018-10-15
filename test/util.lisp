@@ -64,7 +64,7 @@
 	    (*current-json-reader* ,func)
 	    (*current-array-type* (type-of (read-json-string +array-type-check+)))
 	    (*current-object-type* (type-of (read-json-string +object-type-check+)))
-	    (*json-object-type*
+	    (*json-object-flavor*
 	     (if-let ((type (rassoc ,func *json-reader-alist*)))
 	       (car type)
 	       *json-reader-alist*)))
@@ -77,5 +77,5 @@
 	  (format t "~&testing on ~A:~A~& (JSON ~A, JSON array = ~A, JSON object = ~A)~%"
 		  (package-name (symbol-package *current-json-reader*))
 		  *current-json-reader*
-		  *json-object-type* *current-array-type* *current-object-type*)
+		  *json-object-flavor* *current-array-type* *current-object-type*)
 	  (1am:run))))

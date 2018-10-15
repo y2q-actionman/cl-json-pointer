@@ -1,8 +1,49 @@
 (in-package :cl-json-pointer)
 
 (defconstant +end+
-  '+end+
+  '-
   "A symbol indicates 'the (nonexistent) member after the last array element', denoted by '-'")
+
+;;; Reference Token
+
+(defun read-reference-token-as-index (rtoken &optional (errorp t))
+  (etypecase rtoken
+    (integer rtoken)
+    (symbol (assert (eq rtoken +end+)
+		    () 'json-pointer-bad-reference-token-error
+		    :reference-token rtoken
+		    :format-control "reference token (~A) is not a known symbol")
+	    rtoken)
+    (string
+     (flet ((error-if-required (&rest error-args)
+	      (let ((e (apply #'make-condition error-args)))
+		(if errorp (error e) e))))
+       (cond ((and (> (length rtoken) 1)
+		   (char= (char rtoken 0) #\0)) ; RFC6901 does not allow '0' at the beginning.
+	      (values nil
+		      (error-if-required 'json-pointer-bad-reference-token-0-used-error
+					 :reference-token rtoken)))
+	     (t
+	      (handler-case (parse-integer rtoken)
+		(error ()
+		  (values nil
+			  (error-if-required 'json-pointer-bad-reference-token-not-numeric-error
+					     :reference-token rtoken))))))))))
+
+;;; object key
+
+(defgeneric intern-object-key (flavor rtoken)
+  (:documentation "Interns `rtoken' as JSON object key, with JSON lib flavor of `flavor'")
+  (:method (flavor (rtoken symbol))
+    (declare (ignore flavor))
+    rtoken)
+  (:method (flavor (rtoken string))	; This case is ambigouns
+    "Interns `rtoken' itself as JSON object key.
+This is suitable for yason, st-json, jsown, json-streams, and com.gigamonkeys.json."
+    (declare (ignore flavor))
+    rtoken))
+
+;;; Parser
 
 (deftype parsed-json-pointer ()
   'list)
@@ -14,9 +55,6 @@
   (error 'json-pointer-parse-error
 	 :format-control "Unsupported type for parsing"
 	 :format-arguments (list pointer)))
-
-(eval-when (:load-toplevel :execute) ; assertion for next defmethod
-  (assert (subtypep 'parsed-json-pointer 'list)))
 
 (defmethod parse-json-pointer ((pointer list) &key &allow-other-keys)
   ;; a short circuit for current `parsed-json-pointer' definition.

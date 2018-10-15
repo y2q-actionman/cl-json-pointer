@@ -42,45 +42,6 @@
 	      (progn ,@body
 		     ,@(if na-supplied-p `(,next-arg) ())))))
 
-;;; Reference Token
-
-(defun read-reference-token-as-index (rtoken &optional (errorp t))
-  (etypecase rtoken
-    (integer rtoken)
-    (symbol (assert (eq rtoken +end+)
-		    () 'json-pointer-bad-reference-token-error
-		    :reference-token rtoken
-		    :format-control "reference token (~A) is not a known symbol")
-	    rtoken)
-    (string
-     (flet ((error-if-required (&rest error-args)
-	      (let ((e (apply #'make-condition error-args)))
-		(if errorp (error e) e))))
-       (cond ((and (> (length rtoken) 1)
-		   (char= (char rtoken 0) #\0)) ; RFC6901 does not allow '0' at the beginning.
-	      (values nil
-		      (error-if-required 'json-pointer-bad-reference-token-0-used-error
-					 :reference-token rtoken)))
-	     (t
-	      (handler-case (parse-integer rtoken)
-		(error ()
-		  (values nil
-			  (error-if-required 'json-pointer-bad-reference-token-not-numeric-error
-					     :reference-token rtoken))))))))))
-
-;;; object key
-
-(defgeneric intern-object-key (flavor rtoken)
-  (:documentation "Interns `rtoken' as JSON object key, with JSON lib flavor of `flavor'")
-  (:method ((flavor t) (rtoken symbol))
-    (declare (ignore flavor))
-    rtoken)
-  (:method ((flavor t) (rtoken string))	; This case is ambigouns
-    "Interns `rtoken' itself as JSON object key.
-This is suitable for yason, st-json, jsown, json-streams, and com.gigamonkeys.json."
-    (declare (ignore flavor))
-    rtoken))
-
 ;;; Main traversal.
 
 (defgeneric traverse-by-reference-token (flavor obj rtoken set-method next-setter)

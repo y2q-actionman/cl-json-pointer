@@ -11,7 +11,7 @@
 		#:slot-makunbound-using-class)
   (:export
    #:json-pointer-error
-   #:*json-object-type*
+   #:*json-object-flavor*
    #:*cl-json-pointer-supported-json-flavors*
    #:parse-json-pointer
    #:get-by-json-pointer
