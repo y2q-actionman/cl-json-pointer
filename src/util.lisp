@@ -76,31 +76,11 @@ head and the previous cons of the passed cons."
 ;;; Others
 
 (defun compare-string-by-readtable-case (a b &key (case (readtable-case *readtable*)))
+  ;; TODO: For removing this, I require 'try-intern' like one!
   ;; TODO: should I use `ignore-errors' for alist (or plist) ?
   (ecase case
     ((:upcase :downcase) (string-equal a b))
     ((:preserve :invert) (string= a b))))
-
-(defun string-invert-case (string &key (start 0) (end nil))
-  (loop with end = (or end (length string))
-     with ret = (make-array (- end start) :element-type 'character)
-     for i from start below end
-     as c = (char string i)
-     for j from 0
-     do (setf (char ret j)
-	      (cond ((upper-case-p c) (char-downcase c))
-		    ((lower-case-p c) (char-upcase c))
-		    (t c)))
-     finally (return ret)))
-
-(defun intern-with-readtable-case (name &key (case (readtable-case *readtable*))
-					  (package *package*))
-  (intern (ecase case
-	    (:upcase (string-upcase name))
-	    (:downcase (string-downcase name))
-	    (:preserve name)
-	    (:invert (string-invert-case name)))
-	  package))
 
 (defmacro thunk-lambda (&body form)
   "Used for making thunks."

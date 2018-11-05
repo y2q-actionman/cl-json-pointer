@@ -8,7 +8,7 @@
 
 (defvar *traverse-nil-set-to-last-method* nil
   "Determines how to set to the last (by '-') of NIL.
-- `:nil' :: (Default) treated as `:list'.
+- `nil' :: (Default) treated as `:list'.
 - `:list' :: pushes <value> as an ordinal list.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
@@ -17,7 +17,7 @@
 
 (defvar *traverse-nil-set-to-index-method* nil
   "Determines how to set to NIL by an index.
-- `:nil' :: (Default) treated as `:list'.
+- `nil' :: (Default) treated as `:list'.
 - `:list' :: makes a new list and set <value> into nth point.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
@@ -26,7 +26,7 @@
 
 (defvar *traverse-nil-set-to-name-method* nil
   "Determines how to set to NIL by a name.
-- `:nil' :: (Default) treated as `:alist'.
+- `nil' :: (Default) treated as `:alist'.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
 ")
@@ -84,7 +84,7 @@ closure can be used as a setter.
 					set-method next-setter)
   ;; accepts `nil' as alist.
   (flet ((add-to-head (x)
-	   (acons (intern-object-key flavor rtoken) x alist)))
+	   (acons rtoken x alist))) ; assumes `rtoken' is interned.
     (if-let ((entry (assoc rtoken alist :test #'compare-string-by-readtable-case)))
       (values (cdr entry) entry
 	      (ecase set-method
@@ -115,7 +115,7 @@ closure can be used as a setter.
 					set-method next-setter)
   ;; accepts `nil' as plist.
   (flet ((add-to-head (x)
-	   (list* (intern-object-key flavor rtoken) x plist)))
+	   (list* rtoken x plist))) ; assumes `rtoken' is interned.
     (loop for plist-head on plist by #'cddr
        as (k v) = plist-head
        when (compare-string-by-readtable-case k rtoken) ; plist often uses `eq', but I use this.
@@ -147,6 +147,7 @@ closure can be used as a setter.
 		       
 (defmethod traverse-by-reference-token ((flavor (eql :list)) (list list)
 					(rtoken (eql +end+)) set-method next-setter)
+  "Pushing to an ordinal list."
   (values nil nil
 	  (ecase set-method
 	    ((nil) nil)
@@ -162,6 +163,7 @@ closure can be used as a setter.
 	
 (defmethod traverse-by-reference-token ((flavor (eql :list)) (list list)
 					(index integer) set-method next-setter)
+  "Indexing to an ordinal list."
   (if-let ((this-cons (nthcdr index list)))
     (values (car this-cons) this-cons
 	    (ecase set-method
@@ -198,6 +200,7 @@ closure can be used as a setter.
 
 (defmethod traverse-by-reference-token ((flavor (eql :list)) (list list)
 					(rtoken string) set-method next-setter)
+  "Indexing to an ordinal list."
   (traverse-by-reference-token flavor list
 			       (read-reference-token-as-index rtoken)
 			       set-method next-setter))
@@ -210,18 +213,19 @@ closure can be used as a setter.
   (declare (ignore flavor))
   (traverse-by-reference-token :list obj rtoken set-method next-setter))
 
-(defun list-try-traverse (kinds list rtoken set-method next-setter)
+(defun list-try-traverse (kinds flavor list rtoken set-method next-setter)
   ;; `rtoken' may be ambiguous with an index or a name of object fields.
   ;; 
   ;; 1. Try to use it as an existed field name.
   ;; FIXME: This loop is too heavy! (but I think this is required..)
   (let* ((set-to-nil-kind-default nil)
+	 (interned-rtoken (intern-object-key flavor rtoken))
 	 (try-results
 	  (loop for kind in kinds
 	     as ret =
 	       (handler-case
 		   (multiple-value-list
-		    (traverse-by-reference-token kind list rtoken set-method next-setter))
+		    (traverse-by-reference-token kind list interned-rtoken set-method next-setter))
 		 (error () nil))
 	     if (second ret)		; exists?
 	     do (return-from list-try-traverse
@@ -260,12 +264,10 @@ closure can be used as a setter.
 			 :format-arguments (list list rtoken)))))))
 
 (defmethod traverse-by-reference-token (flavor (obj list) (rtoken string) set-method next-setter)
-  (declare (ignorable flavor))
-  (list-try-traverse *traverse-object-like-kinds*
+  (list-try-traverse *traverse-object-like-kinds* flavor
 		     obj rtoken set-method next-setter))
 
 (defmethod traverse-by-reference-token (flavor (obj null) rtoken set-method next-setter)
-  (declare (ignorable flavor))
   ;; empty. this is problematic for setting.
   (values nil nil
 	  (ecase set-method
@@ -283,7 +285,12 @@ closure can be used as a setter.
 			   (t
 			    (or *traverse-nil-set-to-name-method* :alist)))))
 	       (ecase nil-method
-		 ((:list :alist :plist)
+		 ((:alist :plist)
+		  (nth-value 2 (traverse-by-reference-token
+				nil-method obj
+				(intern-object-key flavor rtoken)
+				set-method next-setter)))
+		 (:list
 		  (nth-value 2 (traverse-by-reference-token
 				nil-method obj rtoken set-method next-setter)))
 		 (:array
@@ -296,59 +303,57 @@ closure can be used as a setter.
 
 ;;; Objects
 
-(defun traverse-by-reference-token-using-class (obj rtoken set-method next-setter class)
-  (if-let ((slot (find rtoken (class-slots class)
-		       :key #'slot-definition-name
-		       :test #'compare-string-by-readtable-case))) ; TODO: use intern-object-key?
-    (let ((bound? (slot-boundp-using-class class obj slot)))
-      (values (if bound?
-		  (slot-value-using-class class obj slot))
-	      bound?
-	      (ecase set-method
-		((nil) nil)
-		((:update :add)
-		 (chained-setter-lambda (x) (next-setter obj)
-		   (setf (slot-value-using-class class obj slot) x)))
-		((:remove :delete)
-		 (if bound?
-		     (chained-setter-lambda () (next-setter obj)
-		       (slot-makunbound-using-class class obj slot))
-		     (thunk-lambda
-		       (error 'json-pointer-access-error
-			      :format-control "object ~A's '~A' slot is unbound"
-			      :format-arguments (list obj rtoken))))))))
-    (values nil nil
-	    (if set-method		; TODO: add slot? (only if "add")
-		(thunk-lambda
-		  (error 'json-pointer-access-error
-			 :format-control "object ~A does not have '~A' slot"
-			 :format-arguments (list obj rtoken)))))))
+(defun traverse-by-reference-token-using-class (flavor obj rtoken set-method next-setter class)
+  (let ((object-key (intern-object-key flavor rtoken)))
+    (if-let ((slot (find object-key (class-slots class)
+			 :key #'slot-definition-name
+			 :test #'string=)))
+      (let ((bound? (slot-boundp-using-class class obj slot)))
+	(values (if bound?
+		    (slot-value-using-class class obj slot))
+		bound?
+		(ecase set-method
+		  ((nil) nil)
+		  ((:update :add)
+		   (chained-setter-lambda (x) (next-setter obj)
+		     (setf (slot-value-using-class class obj slot) x)))
+		  ((:remove :delete)
+		   (if bound?
+		       (chained-setter-lambda () (next-setter obj)
+			 (slot-makunbound-using-class class obj slot))
+		       (thunk-lambda
+			 (error 'json-pointer-access-error
+				:format-control "object ~A's '~A' slot is unbound"
+				:format-arguments (list obj rtoken))))))))
+      (values nil nil
+	      (if set-method	     ; TODO: add slot? (only if "add")
+		  (thunk-lambda
+		    (error 'json-pointer-access-error
+			   :format-control "object ~A does not have '~A' slot"
+			   :format-arguments (list obj rtoken))))))))
 
 (defmethod traverse-by-reference-token (flavor (obj standard-object) rtoken set-method next-setter)
   ;; cl-json:fluid-object can be treated here.
-  (declare (ignore flavor))
-  (traverse-by-reference-token-using-class obj rtoken set-method next-setter (class-of obj)))
+  (traverse-by-reference-token-using-class flavor obj rtoken set-method next-setter (class-of obj)))
 
 (defmethod traverse-by-reference-token (flavor (obj structure-object) rtoken set-method next-setter)
-  (declare (ignore flavor))
-  (traverse-by-reference-token-using-class obj rtoken set-method next-setter (class-of obj)))
+  (traverse-by-reference-token-using-class flavor obj rtoken set-method next-setter (class-of obj)))
 
 ;;; Hash table
 
 (defmethod traverse-by-reference-token (flavor (obj hash-table) rtoken set-method next-setter)
-  ;; TODO: use `compare-string-by-readtable-case' (depending on json lib..)
-  (let ((key (intern-object-key flavor rtoken)))
-    (multiple-value-bind (value exists?) (gethash key obj)
+  (let ((object-key (intern-object-key flavor rtoken)))
+    (multiple-value-bind (value exists?) (gethash object-key obj)
       (values value exists?
 	      (ecase set-method
 		((nil) nil)
 		((:add :update) 
 		 (chained-setter-lambda (x) (next-setter obj)
-		   (setf (gethash key obj) x)))
+		   (setf (gethash object-key obj) x)))
 		((:delete :remove)
 		 (if exists?
 		     (chained-setter-lambda () (next-setter obj)
-		       (remhash key obj))
+		       (remhash object-key obj))
 		     (thunk-lambda
 		       (error 'json-pointer-access-error
 			      :format-control "Hash-table ~A does not have ~A key"

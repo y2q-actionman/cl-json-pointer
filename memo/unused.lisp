@@ -5,6 +5,8 @@
 
 (in-package :cl-json-pointer/trush)
 
+;;; deleted from utils
+
 (defun remove-nth (list n)
   (check-type n (integer 0))
   (loop with heads = nil
@@ -23,6 +25,27 @@
 	 finally
 	   (setf (cdr c) (cddr c))
 	   (return list))))
+
+(defun string-invert-case (string &key (start 0) (end nil))
+  (loop with end = (or end (length string))
+     with ret = (make-array (- end start) :element-type 'character)
+     for i from start below end
+     as c = (char string i)
+     for j from 0
+     do (setf (char ret j)
+	      (cond ((upper-case-p c) (char-downcase c))
+		    ((lower-case-p c) (char-upcase c))
+		    (t c)))
+     finally (return ret)))
+
+(defun intern-with-readtable-case (name &key (case (readtable-case *readtable*))
+					  (package *package*))
+  (intern (ecase case
+	    (:upcase (string-upcase name))
+	    (:downcase (string-downcase name))
+	    (:preserve name)
+	    (:invert (string-invert-case name)))
+	  package))
 
 
 ;;; deleted from test codes.

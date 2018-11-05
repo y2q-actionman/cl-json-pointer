@@ -61,8 +61,13 @@
 
 (1am:test test0-traverse-json-2
   (let ((obj (make-instance 'test-class))
-	(ptr "/hoge"))
-    (1am:is (equal (get-by-json-pointer obj ptr)
+	(ptr (ecase (readtable-case *readtable*)
+	       (:upcase "/HOGE")
+	       (:downcase "/hoge")
+	       (:preserve "/hoge")
+	       (:invert "/HOGE"))))
+    ;; This test is dependent from json libs..
+    (1am:is (equal (get-by-json-pointer obj ptr :flavor t)
 		   'hoge-value))))
 
 (1am:test test0-traverse-json-3 ()
