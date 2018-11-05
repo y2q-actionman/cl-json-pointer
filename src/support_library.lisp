@@ -1,6 +1,5 @@
 (in-package :cl-json-pointer)
 
-;;; FIXME: merge name -- json type? flavor?
 (defvar *cl-json-pointer-supported-json-flavors* nil)
 
 ;;; yason

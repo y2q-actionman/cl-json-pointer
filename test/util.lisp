@@ -30,7 +30,6 @@
 
 (defvar *current-json-reader* nil)
 (defvar *current-array-type* nil)
-(defvar *current-object-type* nil)
 
 (defun read-json-string (string)
   (check-type *current-json-reader* (or symbol function))
@@ -40,11 +39,7 @@
   "[1]"
   :test #'equal)
 
-(define-constant +object-type-check+
-  "{\"a\": 1}"
-  :test #'equal)
-
-(defmacro current-json-reader-etypecase ((type-var) &body clauses)
+(defmacro esubtypecase ((type-var) &body clauses)
   (loop with current-type = (gensym)
      for (type . body) in clauses
      collect `((subtypep ,current-type ',type) ,@body) into ex-clauses
@@ -52,7 +47,7 @@
        (return `(let ((,current-type ,type-var))
 		  (cond ,@ex-clauses
 			(t
-			 (error "Unexpected type ~A for 'current-json-reader-etypecase'"
+			 (error "Unexpected type ~A for 'esubtypecase'"
 				,current-type)))))))
 
 (defmacro with-current-json-reader ((func_) &body body)
@@ -63,7 +58,6 @@
 		       ,func))
 	    (*current-json-reader* ,func)
 	    (*current-array-type* (type-of (read-json-string +array-type-check+)))
-	    (*current-object-type* (type-of (read-json-string +object-type-check+)))
 	    (*json-object-flavor*
 	     (if-let ((type (rassoc ,func *json-reader-alist*)))
 	       (car type)

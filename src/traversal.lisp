@@ -69,7 +69,7 @@ closure can be used as a setter.
 
 (defmethod traverse-by-reference-token (flavor obj rtoken set-method next-setter)
   (declare (ignore set-method next-setter))
-  ;; bottom case -- refers an unsupported type object.
+  ;; bottom case -- refers an unsupported object.
   (error-on-traversing-atom obj flavor rtoken))
 
 (defmethod traverse-by-reference-token (flavor (obj string) rtoken set-method next-setter)

@@ -28,7 +28,7 @@
     (let ((qux (get-by-json-pointer obj "/qux")))
       (json-streams-array-pop-prefix qux)
       (1am:is (equalp qux
-		      (current-json-reader-etypecase (*current-array-type*)
+		      (esubtypecase (*current-array-type*)
 			(list '(3 4 5 6))
 			(array #(3 4 5 6))))))
     
@@ -36,7 +36,7 @@
     (let ((qux (get-by-json-pointer obj "/qux")))
       (json-streams-array-pop-prefix qux)
       (1am:is (equalp qux 
-		      (current-json-reader-etypecase (*current-array-type*)
+		      (esubtypecase (*current-array-type*)
 			(list '(3 4 5 6 99))
 			(array #(3 4 5 6 99))))))
 
@@ -107,7 +107,7 @@
     (cljsp:delete obj "/a")
     (1am:is (not (cljsp:exists-p obj  "/a")))
     (cljsp:delete obj "/d/e/1")
-    (current-json-reader-etypecase (*current-array-type*)
+    (esubtypecase (*current-array-type*)
       (list
        (1am:is (cljsp:exists-p obj "/d/e/0"))
        (1am:is (cljsp:exists-p obj "/d/e/0/a"))

@@ -31,8 +31,8 @@
 (define-setf-expander get (obj pointer &rest args &key &allow-other-keys &environment env)
   (get-setf-expansion `(get-by-json-pointer ,obj ,pointer ,@args) env))
 
-(defmacro update (obj pointer value &rest keyargs)
+(defmacro update (obj pointer value &rest keyargs &key &allow-other-keys)
   `(update-by-json-pointer ,obj ,pointer ,value ,@keyargs))
  
-(defmacro deletef (obj pointer &rest keyargs)
+(defmacro deletef (obj pointer &rest keyargs &key &allow-other-keys)
   `(deletef-by-json-pointer ,obj ,pointer ,@keyargs))

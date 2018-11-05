@@ -53,7 +53,7 @@ This is suitable for yason, st-json, jsown, json-streams, and com.gigamonkeys.js
 
 (defmethod parse-json-pointer (pointer &key &allow-other-keys)
   (error 'json-pointer-parse-error
-	 :format-control "Unsupported type for parsing"
+	 :format-control "Unsupported object for parsing"
 	 :format-arguments (list pointer)))
 
 (defmethod parse-json-pointer ((pointer list) &key &allow-other-keys)
