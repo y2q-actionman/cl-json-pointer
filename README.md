@@ -1,6 +1,6 @@
 # Abstract
 
-JSON Pointer, defined in [RFC6901](https://tools.ietf.org/html/rfc6901), processor for Common Lisp.
+A JSON Pointer, defined in [RFC6901](https://tools.ietf.org/html/rfc6901), implementation for Common Lisp.
 
 This libary aims to be independent from any JSON libraries (as much as possible).
 
@@ -50,6 +50,8 @@ For running tests, do below additionally.
 
 # Examples
 
+## get opetations (with st-json)
+
 ```lisp
 (in-package :cl-user)
 (use-package :cl-json-pointer)
@@ -68,7 +70,8 @@ For running tests, do below additionally.
    \"m~n\": 8
    }")
 
-(let ((obj (cl-json:decode-json-from-string *rfc6901-example*)))
+(let ((obj (st-json:read-json-from-string *rfc6901-example*))
+	  (cl-json-pointer:*json-object-flavor* :st-json))
   (eql obj (get-by-json-pointer obj "")) ; => T
   (get-by-json-pointer obj "/foo")	 ; => ("bar" "baz")
   (get-by-json-pointer obj "/foo/0")	 ; => "bar"
@@ -84,10 +87,154 @@ For running tests, do below additionally.
   )
 ```
 
-(TODO: add 'set' examples)
+## set operations (with cl-json)
 
-(TODO: add Lisp object examples)
+### setting to an object
+
+```lisp
+
+;;; Uses *rfc6901-example* above.
+
+(defparameter *obj*
+  (cl-json:decode-json-from-string *rfc6901-example*))
+  
+(get-by-json-pointer *obj* "/hoge" :flavor :cl-json) ; => nil
+(exists-p-by-json-pointer *obj* "/hoge" :flavor :cl-json) ; => nil
+
+
+;; Sets into "hoge" field.
+
+(setf *obj*
+	(set-by-json-pointer *obj* "/hoge" "something" :flavor :cl-json))
+
+(get-by-json-pointer *obj* "/hoge" :flavor :cl-json) ; => "something"
+(exists-p-by-json-pointer *obj* "/hoge" :flavor :cl-json) ; => T
+
+
+;; `update-by-json-pointer' is a modify macro of `set-by-json-pointer`.
+
+(update-by-json-pointer *obj* "/hoge" "something-2" :flavor :cl-json)
+
+(get-by-json-pointer *obj* "/hoge" :flavor :cl-json) ; => "something-2"
+(exists-p-by-json-pointer *obj* "/hoge" :flavor :cl-json) ; => T
+
+```
+
+### setting to an array
+
+
+``` lisp
+
+;; setting to array with index
+
+(defparameter *obj*
+  (cl-json:decode-json-from-string *rfc6901-example*))
+  
+(setf *json-object-flavor* :cl-json)  ; defaults :flavor to :cl-json
+
+(get-by-json-pointer *obj* "/foo")	 ; => ("bar" "baz")
+
+(update-by-json-pointer *obj* "/foo/0" "zero")
+(update-by-json-pointer *obj* "/foo/1" "one")
+
+(get-by-json-pointer *obj* "/foo")	 ; => ("zero" "one")
+
+
+;; adding to an array tail with index
+
+(exists-p-by-json-pointer *obj* "/foo/2") ; => NIL
+
+(update-by-json-pointer *obj* "/foo/3" "three")
+
+(get-by-json-pointer *obj* "/foo/3") ; => "three"
+(exists-p-by-json-pointer *obj* "/foo/3") ; => T
+
+(get-by-json-pointer *obj* "/foo/2") ; => NIL
+(exists-p-by-json-pointer *obj* "/foo/2") ; => T
+
+
+;; pushing to array tail with '-'
+
+(exists-p-by-json-pointer *obj* "/foo/4") ; => NIL
+
+(update-by-json-pointer *obj* "/foo/-" "four")
+
+(get-by-json-pointer *obj* "/foo")	 ; => ("zero" "one" NIL "three" "four")
+(exists-p-by-json-pointer *obj* "/foo/4") ; => T
+```
+
+## delete operations (with jsown)
+
+### deleting from an object
+
+```lisp
+
+;;; Uses *rfc6901-example* above.
+
+(defparameter *obj*
+  (jsown:parse *rfc6901-example*))
+
+(setf cl-json-pointer:*json-object-flavor* :jsown)
+
+
+(get-by-json-pointer *obj* "/m~0n") ; => 8
+
+(setf *obj*
+	(delete-by-json-pointer *obj* "/m~0n"))
+
+(get-by-json-pointer *obj* "/m~0n") ; => NIL
+(exists-p-by-json-pointer *obj* "/m~0n") ; => NIL
+
+
+;; `deletef-by-json-pointer' is a modify macro of `delete-by-json-pointer`.
+
+(get-by-json-pointer *obj* "/ ") ; => 7
+
+(deletef-by-json-pointer *obj* "/ ")
+
+(get-by-json-pointer *obj* "/ ") ; => NIL
+(exists-p-by-json-pointer *obj* "/ ") ; => NIL
+
+```
+
+### Deleting from an array
+
+```lisp
+
+;; Depenging on json lib, Deleting from an array is only filling it with NIL.
+
+(get-by-json-pointer *obj* "/foo")	 ; => ("bar" "baz")
+
+(deletef-by-json-pointer *obj* "/foo/0")
+(get-by-json-pointer *obj* "/foo")	 ; => ("bar" "baz")
+
+```
+
+
+
 
 # API
 
 (stub)
+
+- parse-json-pointer
+
+- get-by-json-pointer
+
+- exists-p-by-json-pointer
+
+- set-by-json-pointer
+- update-by-json-pointer
+
+- delete-by-json-pointer
+- deletef-by-json-pointer
+
+## abbreviation
+
+
+
+# TODO
+
+- Integration with [`jsown:val`](https://github.com/madnificent/jsown) functionalities.
+
+  (I think, I cound simply depend only `jsown` for implementing RFC6901.)
