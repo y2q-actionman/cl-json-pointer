@@ -163,9 +163,9 @@ For running tests, do below additionally.
 (exists-p-by-json-pointer *obj* "/foo/4") ; => T
 ```
 
-## delete operations (with jsown)
+## delete operations
 
-### deleting from an object
+### deleting from an object (with jsown)
 
 ```lisp
 
@@ -197,44 +197,73 @@ For running tests, do below additionally.
 
 ```
 
-### Deleting from an array
+### Deleting from an array (with yason)
 
 ```lisp
 
-;; Depenging on json lib, Deleting from an array is only filling it with NIL.
+;;; Uses "cl-json-pointer/synonyms" system.
+;;; This provides 'cljsp' package contains shorter symbols.
 
-(get-by-json-pointer *obj* "/foo")	 ; => ("bar" "baz")
+(asdf:load-system :cl-json-pointer/synonyms)
 
-(deletef-by-json-pointer *obj* "/foo/0")
-(get-by-json-pointer *obj* "/foo")	 ; => ("bar" "baz")
 
+(defparameter *obj*
+  (yason:parse *rfc6901-example*))
+
+(setf cl-json-pointer:*json-object-flavor* :yason)
+
+
+(cljsp:get *obj* "/foo")	 ; => ("bar" "baz")
+
+(cljsp:deletef *obj* "/foo/0")
+(cljsp:get *obj* "/foo")	 ; => ("baz")
 ```
-
-
-
 
 # API
 
-(stub)
+## symbols of `cl-json-pointer/synonyms`
 
-- parse-json-pointer
+### `parse-json-pointer`
 
-- get-by-json-pointer
+### `*json-object-flavor*`
 
-- exists-p-by-json-pointer
+### `get-by-json-pointer`
 
-- set-by-json-pointer
-- update-by-json-pointer
+### `exists-p-by-json-pointer`
 
-- delete-by-json-pointer
-- deletef-by-json-pointer
+### `set-by-json-pointer`
 
-## abbreviation
+### `update-by-json-pointer`
+
+### `delete-by-json-pointer`
+
+### `deletef-by-json-pointer`
+
+## symbols of `cl-json-pointer/synonyms`
+
+Another "cl-json-pointer/synonyms" system provides "cljsp" package.
+This package contains some shorter symbols.
+
+For using this, please evaluate:
+```lisp
+(asdf:load-system :cl-json-pointer/synonyms)
+```
+
+After that, 'cljsp' package will be defined. It exports:
+
+#:parse #:get #:exists-p #:set #:add #:delete #:remove #:update #:deletef
+
+
+
+
 
 
 
 # TODO
 
 - Integration with [`jsown:val`](https://github.com/madnificent/jsown) functionalities.
-
   (I think, I cound simply depend only `jsown` for implementing RFC6901.)
+  
+  
+- Integration with [`access`](https://github.com/AccelerationNet/access/) library.
+  

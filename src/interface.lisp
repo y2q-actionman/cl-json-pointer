@@ -1,6 +1,11 @@
 (in-package :cl-json-pointer)
 
-(defvar *json-object-flavor* t)
+(defvar *json-object-flavor* t
+  "Default flavor of JSON library currently used.
+This value is used for `:flavor' argument of exported functions.
+Currently acceptable values are held by `*cl-json-pointer-supported-json-flavors*'
+
+Default is `t', behaves as well as possible without any knowledge about JSON libs.")
 
 ;;; Getter family
 

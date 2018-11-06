@@ -62,9 +62,8 @@ closure can be used as a setter.
   ;; FIXME: I think this should be error, but `silent' option is required..
   (values nil nil
 	  (thunk-lambda
-	    ;; this is the only point using `json-pointer-not-found-error'
-	    (error 'json-pointer-not-found-error
-		   :format-control "obj ~S is not an array or an object (reference token: ~A, flavor ~A)"
+	    (error 'json-pointer-access-error
+		   :format-control "Obj ~S is considered as atom in cl-json-pointer and not is not allowed to traverse (reference token: ~A, flavor: ~A)"
 		   :format-arguments (list obj rtoken flavor)))))
 
 (defmethod traverse-by-reference-token (flavor obj rtoken set-method next-setter)
@@ -259,7 +258,7 @@ closure can be used as a setter.
     (values nil nil
 	    (if set-method
 		(thunk-lambda
-		  (error 'json-pointer-not-found-error
+		  (error 'json-pointer-access-error
 			 :format-control "There is no way to set to ~A (rtoken ~A)"
 			 :format-arguments (list list rtoken)))))))
 
