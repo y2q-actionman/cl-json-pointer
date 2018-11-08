@@ -1,6 +1,6 @@
 # Abstract
 
-A JSON Pointer, defined in [RFC6901](https://tools.ietf.org/html/rfc6901), implementation for Common Lisp.
+A JSON Pointer ( [RFC6901](https://tools.ietf.org/html/rfc6901) ) implementation for Common Lisp.
 
 This libary aims to be independent from any JSON libraries (as much as possible).
 
@@ -45,6 +45,7 @@ For running tests, do below additionally.
 (CAUTION: Test codes depends on many JSON libraries!)
 
 ```lisp
+(load "cl-json-pointer-test.asd")
 (asdf:test-system :cl-json-pointer)
 ```
 
