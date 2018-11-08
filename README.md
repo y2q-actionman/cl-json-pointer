@@ -221,23 +221,17 @@ For running tests, do below additionally.
 
 # API
 
-## symbols of `cl-json-pointer/synonyms`
+These symbols are exported from the `cl-json-pointer` package.
+Please see their docstring.
 
-### `parse-json-pointer`
-
-### `*json-object-flavor*`
-
-### `get-by-json-pointer`
-
-### `exists-p-by-json-pointer`
-
-### `set-by-json-pointer`
-
-### `update-by-json-pointer`
-
-### `delete-by-json-pointer`
-
-### `deletef-by-json-pointer`
+- `parse-json-pointer`
+- `*json-object-flavor*`
+- `get-by-json-pointer`
+- `exists-p-by-json-pointer`
+- `set-by-json-pointer`
+- `update-by-json-pointer`
+- `delete-by-json-pointer`
+- `deletef-by-json-pointer`
 
 ## symbols of `cl-json-pointer/synonyms`
 
@@ -249,21 +243,19 @@ For using this, please evaluate:
 (asdf:load-system :cl-json-pointer/synonyms)
 ```
 
-After that, 'cljsp' package will be defined. It exports:
+After that, 'cljsp' package will be defined. It exports these symbols:
 
-#:parse #:get #:exists-p #:set #:add #:delete #:remove #:update #:deletef
-
-
-
-
-
-
+- `parse`
+- `get`
+- `exists-p`
+- `set`
+- `update`
+- `delete`
+- `deletef`
 
 # TODO
 
 - Integration with [`jsown:val`](https://github.com/madnificent/jsown) functionalities.
   (I think, I cound simply depend only `jsown` for implementing RFC6901.)
   
-  
 - Integration with [`access`](https://github.com/AccelerationNet/access/) library.
-  
