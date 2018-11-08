@@ -7,6 +7,9 @@
   (symbol-name '*json-identifier-name-to-lisp*))
 
 (defmethod intern-object-key ((flavor (eql :cl-json)) rtoken)
+  ;; Do Like:
+  ;; (funcall cl-json:*identifier-name-to-key*
+  ;; 	   (funcall cl-json:*json-identifier-name-to-lisp* rtoken)))
   (when-let* ((cl-json-package (find-package :cl-json))
 	      (i-n-t-k-symbol (find-symbol +identifier-name-to-key-name+
 					   cl-json-package))

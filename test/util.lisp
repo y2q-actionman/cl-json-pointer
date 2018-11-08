@@ -68,8 +68,8 @@
   (loop with shuffled = (alexandria:shuffle (copy-list reader-alist))
      for (nil . func) in shuffled
      do (with-current-json-reader (func)
-	  (format t "~&testing on ~A:~A~& (JSON ~A, JSON array = ~A, JSON object = ~A)~%"
+	  (format t "~&testing on ~A:~A~& (JSON ~A, JSON array = ~A)~%"
 		  (package-name (symbol-package *current-json-reader*))
 		  *current-json-reader*
-		  *json-object-flavor* *current-array-type* *current-object-type*)
+		  *json-object-flavor* *current-array-type*)
 	  (1am:run))))

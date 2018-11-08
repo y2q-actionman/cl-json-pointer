@@ -124,3 +124,6 @@ set の時の handler が必要。次項とも関連。
 
 * TODO access を使う。
 https://github.com/AccelerationNet/access/
+
+* TODO set 時の intern-object-key の自動判定
+=T= なら適当に判定する？
