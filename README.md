@@ -119,6 +119,13 @@ For running tests, do below additionally.
 (get-by-json-pointer *obj* "/hoge" :flavor :cl-json) ; => "something-2"
 (exists-p-by-json-pointer *obj* "/hoge" :flavor :cl-json) ; => T
 
+
+;; setf to `(get-by-json-pointer ...)' can also be used.
+
+(setf (get-by-json-pointer *obj* "/hoge" :flavor :cl-json) "fuga")
+
+(get-by-json-pointer *obj* "/hoge" :flavor :cl-json) ; => "fuga"
+
 ```
 
 ### setting to an array
