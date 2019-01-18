@@ -10,7 +10,17 @@ The MIT License. See LICENSE file.
 
 # Loading
 
-## Libraries depending on
+## Load by quicklisp
+
+[![Quicklisp](http://quickdocs.org/badge/cl-json-pointer.svg)](http://quickdocs.org/cl-json-pointer/)
+
+```lisp
+(ql:quickload "cl-json-pointer")
+```
+
+## or, Load manually
+
+### Libraries depending on
 
 * asdf
 * alexandria
@@ -29,17 +39,14 @@ Current supported json libs are:
 - json-streams
 - com.gigamonkeys.json
 
-
-## Load
-
-Currently, this is not quicklisp-ready. Please load manually.
+### Load
 
 ```lisp
 (load "cl-json-pointer.asd")
 (asdf:load-system :cl-json-pointer)
 ```
 
-## Running tests.
+### Running tests.
 
 For running tests, do below additionally.
 (CAUTION: Test codes depends on many JSON libraries!)
