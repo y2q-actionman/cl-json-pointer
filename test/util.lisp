@@ -26,20 +26,27 @@
 
 ;;; for multiple json libraries
 
-(defvar *json-reader-alist* nil)
+(defvar *json-reader-alist* nil
+  "See `run'")
 
-(defvar *current-json-reader* nil)
-(defvar *current-array-type* nil)
+(defvar *current-json-reader* nil
+  "See `with-current-json-reader'")
+
+(defvar *current-array-type* nil
+  "See `with-current-json-reader'")
 
 (defun read-json-string (string)
+  "Reads STRING using `*current-json-reader*'."
   (check-type *current-json-reader* (or symbol function))
   (funcall *current-json-reader* string))
 
 (define-constant +array-type-check+
   "[1]"
-  :test #'equal)
+  :test #'equal
+  :documentation "Used for checking how JSON libs treat arrays. See `with-current-json-reader'.")
 
 (defmacro esubtypecase ((type-var) &body clauses)
+  "Like `etypecase', but uses `subtypep' for type comparison."
   (loop with current-type = (gensym)
      for (type . body) in clauses
      collect `((subtypep ,current-type ',type) ,@body) into ex-clauses
@@ -51,6 +58,8 @@
 				,current-type)))))))
 
 (defmacro with-current-json-reader ((func_) &body body)
+  "Binds `*current-json-reader*', `*current-array-type*', and
+`*json-object-flavor*' referring FUNC_, and runs BODY."
   (let ((func (gensym)))
     `(let* ((,func ,func_)
 	    (,func (if (keywordp ,func)
@@ -65,6 +74,7 @@
        ,@body)))
 
 (defun run (&optional (reader-alist *json-reader-alist*))	; test entry point
+  "Runs `1am:run' with changing JSON backend based on `*json-reader-alist*'"
   (loop with shuffled = (alexandria:shuffle (copy-list reader-alist))
      for (nil . func) in shuffled
      do (with-current-json-reader (func)

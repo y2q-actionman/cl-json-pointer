@@ -10,6 +10,9 @@
 (in-package :cl-json-pointer/synonyms)
 
 (defmacro defsynonym-cljsp-func (name (func &rest required-args))
+  "Defines a function named by NAME as a synonym of FUNC.
+REQUIRED-ARGS are required arguments of FUNC.
+(The reason why this is required is mainly for 'slime-autodoc'.)"
   `(progn (declaim (inline ,name))
 	  (defun ,name (,@required-args &rest keyargs &key &allow-other-keys)
 	    (apply #',func ,@required-args keyargs))))
