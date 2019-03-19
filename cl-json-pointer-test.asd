@@ -1,6 +1,4 @@
-(in-package :cl-user)
-
-(asdf:defsystem #:cl-json-pointer/test
+(defsystem #:cl-json-pointer/test
   :description "Tests for cl-json-pointer."
   :licence "MIT"
   :author "YOKOTA Yuki <y2q.actionman@gmail.com>"
@@ -35,6 +33,6 @@
 	     (:file "test3")
 	     (:file "test4")
 	     (:file "test-top-page"))))
-  :perform (asdf:prepare-op :before (o c)
-             (set (uiop:find-symbol* :*tests* :1am) '() ))
-  :perform (asdf:test-op (o s) (uiop:symbol-call '#:cl-json-pointer/test '#:run)))
+  :perform (prepare-op :before (o c)
+             (set (find-symbol* :*tests* :1am) '() ))
+  :perform (test-op (o s) (symbol-call '#:cl-json-pointer/test '#:run)))

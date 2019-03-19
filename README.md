@@ -42,7 +42,7 @@ Current supported json libs are:
 ### Load
 
 ```lisp
-(load "cl-json-pointer.asd")
+(asdf:load-asd "cl-json-pointer.asd")
 (asdf:load-system :cl-json-pointer)
 ```
 
@@ -52,7 +52,7 @@ For running tests, do below additionally.
 (CAUTION: Test codes depends on many JSON libraries!)
 
 ```lisp
-(load "cl-json-pointer-test.asd")
+(asdf:load-asd "cl-json-pointer-test.asd")
 (asdf:test-system :cl-json-pointer)
 ```
 
