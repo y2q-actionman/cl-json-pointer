@@ -39,7 +39,7 @@ Current supported json libs are:
 - json-streams
 - com.gigamonkeys.json
 
-### Load
+### Loading
 
 ```lisp
 (asdf:load-asd "cl-json-pointer.asd")
@@ -48,8 +48,13 @@ Current supported json libs are:
 
 ### Running tests.
 
+The test code depends additinal libraries:
+
+- All JSON Libraries enumerated above.
+- 1am
+- named-readtable
+
 For running tests, do below additionally.
-(CAUTION: Test codes depends on many JSON libraries!)
 
 ```lisp
 (asdf:load-asd "cl-json-pointer-test.asd")
