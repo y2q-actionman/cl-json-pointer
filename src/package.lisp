@@ -3,12 +3,8 @@
 (defpackage #:cl-json-pointer
   (:use :cl)
   (:use #:alexandria)
-  (:import-from #:closer-mop
-		#:class-slots
-		#:slot-definition-name
-		#:slot-boundp-using-class
-		#:slot-value-using-class
-		#:slot-makunbound-using-class)
+  (:import-from #:access
+		#:access #:set-access)
   (:export
    #:json-pointer-error
    #:*json-object-flavor*

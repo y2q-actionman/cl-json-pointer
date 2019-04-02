@@ -24,7 +24,7 @@ The MIT License. See LICENSE file.
 
 * asdf
 * alexandria
-* closer-mop
+* access
 
 This library itself does not depend on any JSON libraries.
 You can work with your favorite one.

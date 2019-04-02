@@ -303,33 +303,27 @@ closure can be used as a setter.
 ;;; Objects
 
 (defun traverse-by-reference-token-using-class (flavor obj rtoken set-method next-setter class)
-  (let ((object-key (intern-object-key flavor rtoken)))
-    (if-let ((slot (find object-key (class-slots class)
-			 :key #'slot-definition-name
-			 :test #'string=)))
-      (let ((bound? (slot-boundp-using-class class obj slot)))
-	(values (if bound?
-		    (slot-value-using-class class obj slot))
-		bound?
-		(ecase set-method
-		  ((nil) nil)
-		  ((:update :add)
-		   (chained-setter-lambda (x) (next-setter obj)
-		     (setf (slot-value-using-class class obj slot) x)))
-		  ((:remove :delete)
-		   (if bound?
-		       (chained-setter-lambda () (next-setter obj)
-			 (slot-makunbound-using-class class obj slot))
-		       (thunk-lambda
-			 (error 'json-pointer-access-error
-				:format-control "object ~A's '~A' slot is unbound"
-				:format-arguments (list obj rtoken))))))))
-      (values nil nil
-	      (if set-method	     ; TODO: add slot? (only if "add")
-		  (thunk-lambda
-		    (error 'json-pointer-access-error
-			   :format-control "object ~A does not have '~A' slot"
-			   :format-arguments (list obj rtoken))))))))
+  (let* ((object-key (intern-object-key flavor rtoken))
+	 (slot (access:has-slot? obj object-key)))
+    (multiple-value-bind (value exists?)
+	(access obj slot)
+      ;; TODO: If there is no slot, add it? (only if "add")
+      (values value exists?
+	      (ecase set-method
+		((nil) nil)
+		((:update :add)
+		 (chained-setter-lambda (x) (next-setter obj)
+		   (set-access x obj slot)))
+		((:remove :delete)
+		 (if exists?
+		     (chained-setter-lambda () (next-setter obj)
+		       (slot-makunbound obj slot))
+		     (thunk-lambda
+			  (error 'json-pointer-access-error
+				 :format-control (if (null slot)
+						      "object ~A does not have '~A' slot"
+						      "object ~A's '~A' slot is unbound")
+				 :format-arguments (list obj rtoken))))))))))
 
 (defmethod traverse-by-reference-token (flavor (obj standard-object) rtoken set-method next-setter)
   ;; cl-json:fluid-object can be treated here.
@@ -342,13 +336,14 @@ closure can be used as a setter.
 
 (defmethod traverse-by-reference-token (flavor (obj hash-table) rtoken set-method next-setter)
   (let ((object-key (intern-object-key flavor rtoken)))
-    (multiple-value-bind (value exists?) (gethash object-key obj)
+    (multiple-value-bind (value exists?)
+	(access obj object-key)
       (values value exists?
 	      (ecase set-method
 		((nil) nil)
 		((:add :update) 
 		 (chained-setter-lambda (x) (next-setter obj)
-		   (setf (gethash object-key obj) x)))
+		   (set-access x obj object-key)))
 		((:delete :remove)
 		 (if exists?
 		     (chained-setter-lambda () (next-setter obj)

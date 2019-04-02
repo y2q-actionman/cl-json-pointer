@@ -3,7 +3,7 @@
   :description "cl-json-pointer core files."
   :licence "MIT"
   :author "YOKOTA Yuki <y2q.actionman@gmail.com>"
-  :depends-on (#:alexandria #:closer-mop)
+  :depends-on (#:alexandria #:access)
   :components
   ((:module "src"
 	    :serial t
