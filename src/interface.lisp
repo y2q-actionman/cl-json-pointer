@@ -52,7 +52,7 @@ list when deleting from lists."
   "A setf expansion for allowing `setf' to `(get-by-json-pointer ...)' forms."
   (multiple-value-bind (o-tmps o-vals o-newval o-setter o-getter)
       (get-setf-expansion obj env)
-    (unless (length= o-newval 1)
+    (unless (length= 1 o-newval)
       (error "setf to get-by-json-pointer requires the first arg is one value."))
     (with-gensyms (p-tmp flavor-tmp store)
       (values (list* p-tmp flavor-tmp o-tmps)
