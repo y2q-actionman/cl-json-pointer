@@ -13,8 +13,8 @@
   (:report (lambda (c stream)
 	     (format stream (simple-condition-format-control c)
 		     (slot-value c 'rtoken))))
-  (:documentation "Errors related to the json-pointer syntax"
-   :default-initargs
+  (:documentation "Errors related to the json-pointer syntax")
+  (:default-initargs
       :format-control "Bad reference token (~A)"))
 
 (define-condition json-pointer-bad-reference-token-0-used-error (json-pointer-bad-reference-token-error)
