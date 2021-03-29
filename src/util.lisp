@@ -13,36 +13,33 @@
   (loop for (k nil) on list by #'cddr
      always (symbolp k)))
 
-(defun find-previous-cons (list cons &optional copy-head-p) ; used by list setters.
-  "Finds the previous cons of the `cons' in the `list'.
-If `copy-head-p' is true, makes a partial copy of the `list' between the
-head and the previous cons of the passed cons."
-  (declare (type list list) (type cons cons))
-  (loop for c on list
-     when copy-head-p
-     collect (car c) into copy-head
-     until (eq (cdr c) cons)
-     finally
-       (return (values c copy-head))))
-
 (defun clone-and-replace-on-cons (list cons value)
-  (multiple-value-bind (prev-cons heads)
-      (find-previous-cons list cons t)
-    (declare (ignore prev-cons))
-    (nconc heads (list value) (cdr cons))))
+  "Makes a fresh list whose contents is same as LIST except the car of
+CONS is replaced with VALUE.  If CONS is not contained in LIST,
+returns a new list by appending LIST, (list VALUE) and the cdr of CONS to the LIST."
+  (nconc (ldiff list cons) (list value) (cdr cons)))
 
 (defun remove-cons (list cons &optional (count 1))
-  (multiple-value-bind (prev-cons heads)
-      (find-previous-cons list cons t)
-    (declare (ignore prev-cons))
-    (nconc heads (nthcdr count cons))))
+  "Makes a fresh list whose contents is same as LIST except the CONS
+and successive COUNT conses.  If CONS is not contained in LIST,
+returns a new list by appending LIST and (nthcdr COUNT CONS)."
+  (nconc (ldiff list cons) (nthcdr count cons)))
 
 (defun delete-cons (list cons &optional (count 1))
-  (if (eq list cons)
-      (nthcdr count list)
-      (let ((prev-cons (find-previous-cons list cons)))
-	(setf (cdr prev-cons) (nthcdr count cons))
-	list)))
+  "Destructively modifies LIST to exclude the CONS and successive
+COUNT conses.  If CONS is not contained in LIST, returns a list by
+nconcing LIST and (nthcdr COUNT CONS)."
+  (when (or (eq list cons)
+            (null list))
+    (return-from delete-cons (nthcdr count cons)))
+  (loop for c on list
+        as cdr-c = (cdr c)
+        until (or (eq cdr-c cons)       ; found
+                  (null cdr-c)      ; proper list tail (not contained)
+                  (not (consp cdr-c)))  ; dotted list tail
+        finally
+           (setf (cdr c) (nthcdr count cons))
+           (return list)))
 
 (defun extend-list (list n)
   "Destructively extends `list' to size `n'."

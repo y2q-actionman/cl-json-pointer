@@ -27,6 +27,7 @@
 	     ;;
 	     (:file "reader")
 	     ;;
+	     (:file "test-utils")
 	     (:file "test0")
 	     (:file "test1")
 	     (:file "test2")
