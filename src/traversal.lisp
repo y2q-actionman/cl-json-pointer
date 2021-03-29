@@ -6,30 +6,27 @@
   ;; I don't want to treat string as an array.
   "If this is T, cl-json-pointer trests string as atom.")
 
-(defvar *traverse-nil-set-to-last-method* nil
+(defvar *traverse-nil-set-to-last-method* :list
   "Determines how to set to the last (by '-') of NIL.
-- `nil' :: (Default) treated as `:list'.
-- `:list' :: pushes <value> as an ordinal list.
+- `:list' :: (Default) pushes <value> as an ordinal list.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
-- `:array' :: makes a new array contains <value>.
-")
+- `:array' :: makes a new array contains <value>.")
+(declaim (type symbol *traverse-nil-set-to-last-method*))
 
-(defvar *traverse-nil-set-to-index-method* nil
+(defvar *traverse-nil-set-to-index-method* :list
   "Determines how to set to NIL by an index.
-- `nil' :: (Default) treated as `:list'.
-- `:list' :: makes a new list and set <value> into nth point.
+- `:list' :: (Default) makes a new list and set <value> into nth point.
 - `:alist' :: pushes (reference-token . <value>) as an alist.
 - `:plist' :: appends (reference-token <value>) as an plist.
-- `:error' :: throws an error.
-")
+- `:error' :: throws an error.")
+(declaim (type symbol *traverse-nil-set-to-index-method*))
 
-(defvar *traverse-nil-set-to-name-method* nil
+(defvar *traverse-nil-set-to-name-method* :alist
   "Determines how to set to NIL by a name.
-- `nil' :: (Default) treated as `:alist'.
-- `:alist' :: pushes (reference-token . <value>) as an alist.
-- `:plist' :: appends (reference-token <value>) as an plist.
-")
+- `:alist' :: (Default) pushes (reference-token . <value>) as an alist.
+- `:plist' :: appends (reference-token <value>) as an plist.")
+(declaim (type symbol *traverse-nil-set-to-name-method*))
 
 (defvar *traverse-object-like-kinds* '(:alist :plist))
 
@@ -230,7 +227,7 @@ closure can be used as a setter.
 	     do (return-from list-try-traverse
 		  (values-list ret))
 	     else if (eq kind *traverse-nil-set-to-name-method*)
-	     do (setf set-to-nil-kind-default ret)
+	     do (setf set-to-nil-kind-default ret) ; See '3-1.' below.
 	     else
 	     collect ret)))
     ;; `rtoken' is not a name of object fields.
@@ -243,7 +240,7 @@ closure can be used as a setter.
 	  (traverse-by-reference-token :list list rtoken set-method next-setter)))
       (when (typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
 	(error bad-index-condition)))
-    ;; 3. `rtoken' assumed as a field name, but not found.
+    ;; 3. `rtoken' assumed as a field name, but not found in the list.
     ;; 3-1. use the specified default.
     (when (and set-to-nil-kind-default
 	       (third set-to-nil-kind-default))
@@ -278,11 +275,11 @@ closure can be used as a setter.
 	     (let* ((index (read-reference-token-as-index rtoken nil))
 		    (nil-method
 		     (cond ((eq index +end+)
-			    (or *traverse-nil-set-to-last-method* :list))
+			    *traverse-nil-set-to-last-method*)
 			   ((integerp index)
-			    (or *traverse-nil-set-to-index-method* :list))
+			    *traverse-nil-set-to-index-method*)
 			   (t
-			    (or *traverse-nil-set-to-name-method* :alist)))))
+			    *traverse-nil-set-to-name-method*))))
 	       (ecase nil-method
 		 ((:alist :plist)
 		  (nth-value 2 (traverse-by-reference-token
@@ -298,7 +295,7 @@ closure can be used as a setter.
 		 (:error
 		  (thunk-lambda
 		    (error 'json-pointer-access-error
-			   :format-control "Set to nil by index is not supported")))))))))
+			   :format-control "Set to nil by '~A' is not supported" index)))))))))
 
 ;;; Objects
 
