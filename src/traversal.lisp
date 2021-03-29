@@ -182,7 +182,6 @@ FLAVOR is used when OBJ's type is ambiguous, especially lists."))
 	      ((:delete :remove)
 	       (thunk-lambda
 		 (bad-deleter-error list index)))
-	      ;; These cases works, but confusing with `alist-like-p'...
 	      (:update
 	       (chained-setter-lambda (x) (next-setter list)
 		 ;; TODO: should be more efficient..

@@ -2,17 +2,6 @@
 
 ;;; Lists
 
-(defun alist-like-p (list)
-  (every #'consp list))
-
-(defun plist-like-p (list)
-  ;; I think there is no way to define a good `plist-like-p', because plist
-  ;; does not restricted on its keys. Whether its keys are compared by `eq'
-  ;; (http://www.lispworks.com/documentation/HyperSpec/Body/f_eq.htm),
-  ;; I think I should not assume the keys are always a symbol.
-  (loop for (k nil) on list by #'cddr
-     always (symbolp k)))
-
 (defun clone-and-replace-on-cons (list cons value)
   "Makes a fresh list whose contents is same as LIST except the car of
 CONS is replaced with VALUE.  If CONS is not contained in LIST,
