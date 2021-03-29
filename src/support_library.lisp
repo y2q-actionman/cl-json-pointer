@@ -1,7 +1,7 @@
 (in-package :cl-json-pointer)
 
 (defvar *cl-json-pointer-supported-json-flavors* nil
-  "Holds symbols acceptable by `*json-object-flavor*' and `:flavor' keyword argument (except `T')")
+  "Holds symbols acceptable by `*json-object-flavor*' and :FLAVOR keyword argument (except `T')")
 
 ;;; yason
 (defmethod traverse-by-reference-token
@@ -41,7 +41,7 @@
 (pushnew :jsown *cl-json-pointer-supported-json-flavors*)
 
 ;;; jonathan
-;;; TODO: support `:as' flavors
+;;; TODO: support :AS flavors
 (defmethod traverse-by-reference-token
     ((flavor (eql :jonathan)) (obj null) rtoken set-method next-setter)
   (declare (ignorable rtoken set-method next-setter))
@@ -89,7 +89,7 @@
 					   :list nil index set-method
 					   (lambda (x)
 					     (setf tmp x))))))
-		       (funcall internal-setter x) ; `tmp' gains the newly created list.
+		       (funcall internal-setter x) ; TMP gains the newly created list.
 		       (funcall next-setter (list* :array tmp)))))
 	   (values nil nil
 		   (chained-setter-lambda (x) (next-setter)

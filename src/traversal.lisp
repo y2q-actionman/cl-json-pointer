@@ -42,11 +42,11 @@
 ;;; Main traversal.
 
 (defgeneric traverse-by-reference-token (flavor obj rtoken set-method next-setter)
-  (:documentation "Traverses `obj' with a reference token (`rtoken'), and
+  (:documentation "Traverses OBJ with a reference token (RTOKEN), and
 returns three values: a referred object, existence (boolean), and a
 closure can be used as a setter.
 
-`flavor' is used when `obj''s type is ambiguous, especially lists."))
+FLAVOR is used when OBJ's type is ambiguous, especially lists."))
 
 (defun bad-deleter-error (obj rtoken)
   (error 'json-pointer-access-error
@@ -56,7 +56,7 @@ closure can be used as a setter.
 ;;; Atoms
 
 (defun error-on-traversing-atom (flavor obj rtoken)
-  ;; FIXME: I think this should be error, but `silent' option is required..
+  ;; FIXME: I think this should be error, but a kind of 'silent' option is required..
   (values nil nil
 	  (thunk-lambda
 	    (error 'json-pointer-access-error
@@ -80,7 +80,7 @@ closure can be used as a setter.
 					set-method next-setter)
   ;; accepts `nil' as alist.
   (flet ((add-to-head (x)
-	   (acons rtoken x alist))) ; assumes `rtoken' is interned.
+	   (acons rtoken x alist))) ; assumes RTOKEN is interned.
     (if-let ((entry (assoc rtoken alist :test #'compare-string-by-readtable-case)))
       (values (cdr entry) entry
 	      (ecase set-method
@@ -111,7 +111,7 @@ closure can be used as a setter.
 					set-method next-setter)
   ;; accepts `nil' as plist.
   (flet ((add-to-head (x)
-	   (list* rtoken x plist))) ; assumes `rtoken' is interned.
+	   (list* rtoken x plist))) ; assumes RTOKEN is interned.
     (loop for plist-head on plist by #'cddr
        as (k v) = plist-head
        when (compare-string-by-readtable-case k rtoken) ; plist often uses `eq', but I use this.
@@ -210,7 +210,7 @@ closure can be used as a setter.
   (traverse-by-reference-token :list obj rtoken set-method next-setter))
 
 (defun list-try-traverse (kinds flavor list rtoken set-method next-setter)
-  ;; `rtoken' may be ambiguous with an index or a name of object fields.
+  ;; RTOKEN may be ambiguous with an index or a name of object fields.
   ;; 
   ;; 1. Try to use it as an existed field name.
   ;; FIXME: This loop is too heavy! (but I think this is required..)
@@ -230,9 +230,9 @@ closure can be used as a setter.
 	     do (setf set-to-nil-kind-default ret) ; See '3-1.' below.
 	     else
 	     collect ret)))
-    ;; `rtoken' is not a name of object fields.
+    ;; RTOKEN is not a name of object fields.
     ;;
-    ;; 2. If it can be read as an index, I treat `obj' as an ordinal list.
+    ;; 2. If it can be read as an index, I treat OBJ as an ordinal list.
     (multiple-value-bind (index bad-index-condition)
 	(read-reference-token-as-index rtoken nil)
       (when index			; yes, an ordinal list!
@@ -240,7 +240,7 @@ closure can be used as a setter.
 	  (traverse-by-reference-token :list list rtoken set-method next-setter)))
       (when (typep bad-index-condition 'json-pointer-bad-reference-token-0-used-error)
 	(error bad-index-condition)))
-    ;; 3. `rtoken' assumed as a field name, but not found in the list.
+    ;; 3. RTOKEN assumed as a field name, but not found in the list.
     ;; 3-1. use the specified default.
     (when (and set-to-nil-kind-default
 	       (third set-to-nil-kind-default))
@@ -329,7 +329,7 @@ closure can be used as a setter.
 			   :format-arguments (list obj rtoken))))))))
 
 (defmethod traverse-by-reference-token (flavor (obj standard-object) rtoken set-method next-setter)
-  ;; cl-json:fluid-object can be treated here.
+  ;; `cl-json:fluid-object' can be treated here.
   (traverse-by-reference-token-using-class flavor obj rtoken set-method next-setter (class-of obj)))
 
 (defmethod traverse-by-reference-token (flavor (obj structure-object) rtoken set-method next-setter)
@@ -405,17 +405,17 @@ closure can be used as a setter.
 ;;; Entry Point
 
 (defun traverse-by-json-pointer (obj flavor pointer set-method)
-  "Traverses `obj' with a parsed json-pointer (`pointer'), and returns three values:
+  "Traverses OBJ with a parsed json-pointer (POINTER), and returns three values:
 the referred object, existence (boolean), and a closure can be used as a setter.
 
-`set-method' determines how to *set* into `obj' by the returned setter:
-- `nil' :: No setters made. (Do not set to `obj'.)
-- `:update' :: Destructively updates into `obj'.
-- `:delete' :: Destructively deletes from `obj'.
+SET-METHOD determines how to _set_ into OBJ by the returned setter:
+- `nil' :: No setters made. (Do not set to OBJ.)
+- `:update' :: Destructively updates into OBJ.
+- `:delete' :: Destructively deletes from OBJ.
 - `:add' :: If changing a list, makes a new list containing the set'ed value. (non-list objs are still modified).
 - `:remove' :: If deleting form a list, makes a new list not containing the removed value. (non-list objs are still modified).
 
-`flavor' is a keyword specifies the JSON object flavors.
+FLAVOR is a keyword specifies the JSON object flavors.
 See `*cl-json-pointer-supported-json-flavors*'
 "
   (let ((value obj)

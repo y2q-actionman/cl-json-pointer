@@ -1,6 +1,9 @@
 (in-package :cl-json-pointer)
 
-(defmethod traverse-by-reference-token (flavor (obj st-json:jso) rtoken set-method next-setter)
+(defmethod traverse-by-reference-token
+    (flavor
+     (obj st-json:jso) ; ST-JSON support is separated, for hooking the class here.
+     rtoken set-method next-setter)
   (declare (ignorable flavor))
   (multiple-value-bind (val exists)
       (st-json:getjso rtoken obj)

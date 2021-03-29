@@ -28,7 +28,7 @@ returns a new list by appending LIST and (nthcdr COUNT CONS)."
 (defun delete-cons (list cons &optional (count 1))
   "Destructively modifies LIST to exclude the CONS and successive
 COUNT conses.  If CONS is not contained in LIST, returns a list by
-nconcing LIST and (nthcdr COUNT CONS)."
+`nconc'ing LIST and (nthcdr COUNT CONS)."
   (when (or (eq list cons)
             (null list))
     (return-from delete-cons (nthcdr count cons)))
@@ -68,7 +68,7 @@ nconcing LIST and (nthcdr COUNT CONS)."
 	nil)))
 
 (defun extend-array (array new-length fill-pointer)
-  "Makes a new adjustable fill-pointered array having same contents as `array'"
+  "Makes a new adjustable fill-pointered array having same contents as ARRAY."
   (if (adjustable-array-p array)
       (adjust-array array new-length :initial-element nil
 		    :fill-pointer fill-pointer)

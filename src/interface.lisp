@@ -2,7 +2,7 @@
 
 (defvar *json-object-flavor* t
   "Default flavor of JSON library currently used.
-This value is used for `:flavor' argument of exported functions.
+This value is used for :FLAVOR argument of exported functions.
 Currently acceptable values are held by `*cl-json-pointer-supported-json-flavors*'
 
 Default is `t', behaves as well as possible without any knowledge about JSON libs.")
@@ -10,13 +10,13 @@ Default is `t', behaves as well as possible without any knowledge about JSON lib
 ;;; Getter family
 
 (defun get-by-json-pointer (obj pointer &key (flavor *json-object-flavor*))
-  "Traverses `obj' with `pointer' and returns three values:
-the found value (`nil' if not found), a generalized boolean saying the existence of the place pointed by `pointer', and NIL."
+  "Traverses OBJ with POINTER and returns three values:
+the found value (`nil' if not found), a generalized boolean saying the existence of the place pointed by POINTER, and NIL."
   (let ((parsed-ptr (parse-json-pointer pointer)))
     (traverse-by-json-pointer obj flavor parsed-ptr nil)))
 
 (defun exists-p-by-json-pointer (obj pointer &key (flavor *json-object-flavor*))
-  "Traverses `obj' with `pointer' and returns the existence of the place pointed by `pointer'."
+  "Traverses OBJ with POINTER and returns the existence of the place pointed by POINTER."
   (nth-value 1 (get-by-json-pointer obj pointer :flavor flavor)))
 
 ;;; Setter family
@@ -28,8 +28,8 @@ calls this for making a setter function."
     (nth-value 2 (traverse-by-json-pointer obj obj-flavor parsed-ptr set-method))))
 
 (defun set-by-json-pointer (obj pointer value &key (flavor *json-object-flavor*))
-  "Traverses `obj' with `pointer', sets `value' into the pointed
-place, and returns the modified `obj'"
+  "Traverses OBJ with POINTER, sets VALUE into the pointed
+place, and returns the modified OBJ"
   (funcall (make-setter-by-json-pointer obj flavor pointer :update) value))
 
 (defun add-by-json-pointer (obj pointer value &key (flavor *json-object-flavor*))
@@ -38,8 +38,8 @@ list when setting to lists."
   (funcall (make-setter-by-json-pointer obj flavor pointer :add) value))
 
 (defun delete-by-json-pointer (obj pointer &key (flavor *json-object-flavor*))
-  "Traverses `obj' with `pointer', deletes the pointed place, and
-returns the modified `obj'"
+  "Traverses OBJ with POINTER, deletes the pointed place, and
+returns the modified OBJ"
   (funcall (make-setter-by-json-pointer obj flavor pointer :delete)))
 
 (defun remove-by-json-pointer (obj pointer &key (flavor *json-object-flavor*))
@@ -58,7 +58,7 @@ list when deleting from lists."
       (values (list* p-tmp flavor-tmp o-tmps)
 	      (list* pointer flavor o-vals)
 	      (list store)
-	      `(let ((,(first o-newval)	; this binding influences `o-setter'.
+	      `(let ((,(first o-newval)	; this binding influences O-SETTER.
 		      (set-by-json-pointer ,o-getter ,p-tmp ,store :flavor ,flavor-tmp)))
 		 ,o-setter
 		 ,store)

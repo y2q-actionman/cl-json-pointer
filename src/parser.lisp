@@ -33,12 +33,12 @@
 ;;; object key
 
 (defgeneric intern-object-key (flavor rtoken)
-  (:documentation "Interns `rtoken' as JSON object key, with JSON lib flavor of `flavor'")
+  (:documentation "Interns RTOKEN as JSON object key, with JSON lib flavor of FLAVOR")
   (:method (flavor (rtoken symbol))
     (declare (ignore flavor))
     rtoken)
   (:method (flavor (rtoken string))	; This case is ambigouns
-    "Interns `rtoken' itself as JSON object key.
+    "Interns RTOKEN itself as JSON object key.
 This is suitable for yason, st-json, jsown, json-streams, and com.gigamonkeys.json."
     (declare (ignore flavor))
     rtoken))
@@ -49,7 +49,7 @@ This is suitable for yason, st-json, jsown, json-streams, and com.gigamonkeys.js
   'list)
 
 (defgeneric parse-json-pointer (obj &key start end accept-uri-fragment)
-  (:documentation "Parses `pointer' to an internal representation"))
+  (:documentation "Parses OBJ to an internal representation"))
 
 (defmethod parse-json-pointer (pointer &key &allow-other-keys)
   (error 'json-pointer-parse-error
