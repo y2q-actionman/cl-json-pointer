@@ -41,13 +41,20 @@ nconcing LIST and (nthcdr COUNT CONS)."
            (setf (cdr c) (nthcdr count cons))
            (return list)))
 
-(defun extend-list (list n)
-  "Destructively extends `list' to size `n'."
-  ;; TODO: should be more efficient..
-  (let ((len (length list)))
-    (if (<= n len)
-	list
-	(nconc list (make-list (- n len))))))
+(defun extend-list (list n &key initial-element)
+  "Destructively extends LIST to size N."
+  (declare (type integer n))
+  (let ((tmp-cons (cons :placeholder list)))
+    (declare (dynamic-extent tmp-cons))
+    (loop for prev = tmp-cons then c
+          for rest-length downfrom n
+          for c on list
+          while (plusp rest-length)
+          finally
+             (when (plusp rest-length)
+               (setf (cdr prev)
+                     (make-list rest-length :initial-element initial-element)))
+             (return (cdr tmp-cons)))))
 
 ;;; Arrays
 
@@ -61,7 +68,7 @@ nconcing LIST and (nthcdr COUNT CONS)."
 	nil)))
 
 (defun extend-array (array new-length fill-pointer)
-  "Makes a new adjutable fill-pointered array having same contents as `array'"
+  "Makes a new adjustable fill-pointered array having same contents as `array'"
   (if (adjustable-array-p array)
       (adjust-array array new-length :initial-element nil
 		    :fill-pointer fill-pointer)
