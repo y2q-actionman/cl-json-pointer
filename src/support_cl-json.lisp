@@ -1,10 +1,12 @@
 (in-package :cl-json-pointer)
 
-(defconstant +identifier-name-to-key-name+
-  (symbol-name '*identifier-name-to-key*))
+(define-constant +identifier-name-to-key-name+
+  (symbol-name '*identifier-name-to-key*)
+  :test #'equal)
 
-(defconstant +json-identifier-name-to-lisp-name+
-  (symbol-name '*json-identifier-name-to-lisp*))
+(define-constant +json-identifier-name-to-lisp-name+
+  (symbol-name '*json-identifier-name-to-lisp*)
+  :test #'equal)
 
 (defmethod intern-object-key ((flavor (eql :cl-json)) rtoken)
   ;; Do Like:
