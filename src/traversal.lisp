@@ -372,9 +372,13 @@ FLAVOR is used when OBJ's type is ambiguous, especially lists."))
 	     (thunk-lambda
 	       (bad-deleter-error obj rtoken))))))
 
+(defun vector-in-bounds-p (vector index)
+  "Because `array-in-bounds-p' ignores fill-pointers."
+  (and (<= 0 index) (< index (length vector))))
+
 (defmethod traverse-by-reference-token (flavor (obj array) (rtoken integer) set-method next-setter)
   (declare (ignore flavor))
-  (if (not (array-in-bounds-p obj rtoken))
+  (if (not (vector-in-bounds-p obj rtoken))
       (values nil nil
 	      (ecase set-method
 		((nil) nil)

@@ -15,6 +15,7 @@
 	       #:json-streams
 	       #:com.gigamonkeys.json
 	       #:com.inuoe.jzon
+	       #:shasht
 	       ;; Not supported
 	       ;; #:define-json-expander #:json-mop
 	       )
