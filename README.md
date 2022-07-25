@@ -38,6 +38,7 @@ Current supported json libs are:
 - jonathan (as `:plist` only)
 - json-streams
 - com.gigamonkeys.json
+- com.inuoe.jzon
 
 ### Loading
 

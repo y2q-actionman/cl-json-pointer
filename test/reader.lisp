@@ -51,3 +51,5 @@
 ;;; com.gigamonkeys.json
 (push-json-reader-alist :com.gigamonkeys.json 'com.gigamonkeys.json:parse-json)
 
+;;; com.inuoe.jzon
+(push-json-reader-alist :com.inuoe.jzon 'com.inuoe.jzon:parse)

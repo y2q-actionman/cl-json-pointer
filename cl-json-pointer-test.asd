@@ -14,6 +14,7 @@
 	       #:jonathan ; I surprised this lib has 8 dependencies.
 	       #:json-streams
 	       #:com.gigamonkeys.json
+	       #:com.inuoe.jzon
 	       ;; Not supported
 	       ;; #:define-json-expander #:json-mop
 	       )
