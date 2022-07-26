@@ -4,6 +4,7 @@ name: windows-testSystem
 
 on:
   push:
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 

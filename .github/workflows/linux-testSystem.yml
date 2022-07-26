@@ -4,6 +4,7 @@ name: linux-testSystem
 
 on:
   push:
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -13,7 +14,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lisp: [sbcl-bin, ccl, allegro, clisp, cmucl, abcl, ecl ]
+        lisp: [sbcl-bin, ccl, allegro, ecl ]
+        # clisp, abcl -- Roswell cannot install them.
+        # cmucl -- fast-io (used by jonathan) cannot be installed.
 
     runs-on: ubuntu-latest
 
