@@ -1,10 +1,9 @@
-# From http://3bb.cc/blog/2020/09/11/github-ci/
+# Test for all branches -- try SBCL on Linux, which is required to be in Quicklisp repo.
 
-name: linux-testSystem
+name: linux-sbcl-test
 
 on:
   push:
-    branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -14,7 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lisp: [sbcl-bin, ccl, allegro, clisp, cmucl, abcl, ecl ]
+        # 'sbcl-bin/2.0.5' and 'sbcl-bin/2.2.3' are for Quicklisp build.
+        lisp: [sbcl-bin/2.0.5, sbcl-bin/2.2.3]
 
     runs-on: ubuntu-latest
 
