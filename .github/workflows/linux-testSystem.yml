@@ -31,7 +31,9 @@ jobs:
         id: cache-dot-roswell
         uses: actions/cache@v3
         with:
-          path: ~/.roswell
+          path: |
+            ~/.roswell
+            /usr/local/bin/ros
           key: ${{ runner.os }}-dot-roswell-${{ matrix.lisp }}-${{ hashFiles('**/*.asd') }}
           restore-keys: |
             ${{ runner.os }}-dot-roswell-${{ matrix.lisp }}-
