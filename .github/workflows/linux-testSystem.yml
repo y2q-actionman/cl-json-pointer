@@ -39,8 +39,7 @@ jobs:
           #   ${{ runner.os }}-dot-roswell-${{ matrix.lisp }}-
           #   ${{ runner.os }}-dot-roswell-
 
-      - if: ${{ steps.cache-dot-roswell.outputs.cache-hit == 'false' }}
-        name: install roswell
+      - name: install roswell
         continue-on-error: true
         shell: sh
         env:
