@@ -40,6 +40,7 @@ jobs:
           #   ${{ runner.os }}-dot-roswell-
 
       - name: install roswell
+        if: steps.cache-dot-roswell.outputs.cache-hit != 'true'
         continue-on-error: true
         shell: sh
         env:
