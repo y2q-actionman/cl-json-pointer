@@ -27,18 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: cache .roswell
-        id: cache-dot-roswell
-        uses: actions/cache@v3
-        with:
-          path: ~/.roswell
-          key: ${{ runner.os }}-dot-roswell-${{ matrix.lisp }}-${{ hashFiles('**/*.asd') }}
-          restore-keys: |
-            ${{ runner.os }}-dot-roswell-${{ matrix.lisp }}-
-            ${{ runner.os }}-dot-roswell-
-
-      - if: ${{ steps.cache-dot-roswell.outputs.cache-hit == 'false' }}
-        name: install roswell
+      - name: install roswell
         shell: sh
         env:
           LISP: ${{ matrix.lisp }}
