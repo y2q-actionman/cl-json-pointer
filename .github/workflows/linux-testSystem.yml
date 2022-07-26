@@ -27,6 +27,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: install roswell
+        shell: sh
+        env:
+          LISP: ${{ matrix.lisp }}
+        run: curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh -x
+
       - name: cache .roswell
         id: cache-dot-roswell
         uses: actions/cache@v1
@@ -36,12 +42,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dot-roswell-${{ matrix.lisp }}-
             ${{ runner.os }}-dot-roswell-
-
-      - name: install roswell
-        shell: sh
-        env:
-          LISP: ${{ matrix.lisp }}
-        run: curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh -x
 
       - name: run lisp
         continue-on-error: true
