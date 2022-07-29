@@ -12,7 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lisp: [sbcl-bin, ccl, allegro, clisp, abcl, cmucl, ecl ]
+        lisp: [sbcl-bin, ccl, allegro, cmucl, ecl ]
+        # clisp, abcl -- Roswell cannot install them.
 
     runs-on: ubuntu-latest
 
