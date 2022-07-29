@@ -1,6 +1,6 @@
 # Test for all branches -- try SBCL on Linux, which is required to be in Quicklisp repo.
 
-name: linux-sbcl-test
+name: linux-sbcl-testSystem
 
 on:
   push:
