@@ -6,16 +6,15 @@
   :depends-on (#:alexandria #:closer-mop)
   :components
   ((:module "src"
-	    :serial t
 	    :components
 	    ((:file "package")
-	     (:file "util")
-	     (:file "condition")
-	     (:file "parser")
-	     (:file "traversal")
-	     (:file "interface")
-	     (:file "support_library")
-	     (:file "support_cl-json")))))
+	     (:file "util" :depends-on ("package"))
+	     (:file "condition" :depends-on ("package"))
+	     (:file "parser" :depends-on ("condition"))
+	     (:file "traversal" :depends-on ("util" "condition" "parser"))
+	     (:file "interface" :depends-on ("traversal"))
+	     (:file "support_library" :depends-on ("traversal"))
+	     (:file "support_cl-json" :depends-on ("support_library"))))))
 
 ;;; Some library support. 
 (defsystem #:cl-json-pointer/st-json-support
