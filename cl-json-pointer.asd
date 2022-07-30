@@ -20,6 +20,7 @@
              (:file "support_jonathan" :depends-on ("support"))
              (:file "support_json-streams" :depends-on ("support"))
              (:file "support_com-gigamonkeys-json" :depends-on ("support"))
+             (:file "support_com-inuoe-jzon" :depends-on ("support"))
              ;; Supporting st-json has its own defsystem because it
              ;; requires the real dependency. See below.
              ))))
