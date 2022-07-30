@@ -1,3 +1,8 @@
+;;; Some libs are not in Quicklisp.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-package :com.inuoe.jzon)
+    (pushnew :cl-json-pointer/test/com.inuoe.jzon *features*)))
+
 (defsystem #:cl-json-pointer/test
   :description "Tests for cl-json-pointer."
   :licence "MIT"
@@ -10,7 +15,7 @@
 	       #:cl-json
 	       #:cl-json-pointer/st-json-support
 	       #:com.gigamonkeys.json
-	       #:com.inuoe.jzon
+               (:feature :cl-json-pointer/test/com.inuoe.jzon #:com.inuoe.jzon)
 	       #:jonathan ; I surprised this lib has 8 dependencies.
 	       #:json-streams
 	       #:jsown
