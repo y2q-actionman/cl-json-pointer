@@ -6,15 +6,15 @@
 	       #:cl-json-pointer/synonyms
 	       ;; test libs
 	       #:named-readtables #:1am
-	       ;; All Json libs and platform supports
+	       ;; All Json libs and platform supports (alphabetical order)
 	       #:cl-json
 	       #:cl-json-pointer/st-json-support
-	       #:yason
-	       #:jsown
-	       #:jonathan ; I surprised this lib has 8 dependencies.
-	       #:json-streams
 	       #:com.gigamonkeys.json
 	       #:com.inuoe.jzon
+	       #:jonathan ; I surprised this lib has 8 dependencies.
+	       #:json-streams
+	       #:jsown
+	       #:yason
 	       ;; Not supported
 	       ;; #:define-json-expander #:json-mop
 	       )

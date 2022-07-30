@@ -14,13 +14,14 @@
 	     (:file "traversal" :depends-on ("util" "condition" "parser"))
 	     (:file "interface" :depends-on ("traversal"))
 	     (:file "support" :depends-on ("traversal"))
+             ;; alphabetical order
 	     (:file "support_cl-json" :depends-on ("support"))
-             (:file "support_yason" :depends-on ("support"))
-             (:file "support_jsown" :depends-on ("support"))
-             (:file "support_jonathan" :depends-on ("support"))
-             (:file "support_json-streams" :depends-on ("support"))
              (:file "support_com-gigamonkeys-json" :depends-on ("support"))
              (:file "support_com-inuoe-jzon" :depends-on ("support"))
+             (:file "support_jonathan" :depends-on ("support"))
+             (:file "support_json-streams" :depends-on ("support"))
+             (:file "support_jsown" :depends-on ("support"))
+             (:file "support_yason" :depends-on ("support"))
              ;; Supporting st-json has its own defsystem because it
              ;; requires the real dependency. See below.
              ))))
