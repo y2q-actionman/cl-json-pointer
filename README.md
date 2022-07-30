@@ -4,6 +4,10 @@ A JSON Pointer ( [RFC6901](https://tools.ietf.org/html/rfc6901) ) implementation
 
 This libary aims to be independent from any JSON libraries (as much as possible).
 
+# News
+
+- (2022-07-30) Added supports for com.inuoe.jzon and shasht.
+
 # License
 
 The MIT License. See LICENSE file.
@@ -37,6 +41,7 @@ Current supported JSON libs are (alphabetical order):
 - jonathan (as `:plist` only)
 - json-streams
 - jsown
+- shasht
 - st-json
 - yason
 
