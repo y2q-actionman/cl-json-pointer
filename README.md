@@ -26,7 +26,6 @@ The MIT License. See LICENSE file.
 
 ### Libraries depending on
 
-* asdf
 * alexandria
 * closer-mop
 
