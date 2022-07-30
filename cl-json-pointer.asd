@@ -6,16 +6,25 @@
   :depends-on (#:alexandria #:closer-mop)
   :components
   ((:module "src"
-	    :serial t
 	    :components
 	    ((:file "package")
-	     (:file "util")
-	     (:file "condition")
-	     (:file "parser")
-	     (:file "traversal")
-	     (:file "interface")
-	     (:file "support_library")
-	     (:file "support_cl-json")))))
+	     (:file "util" :depends-on ("package"))
+	     (:file "condition" :depends-on ("package"))
+	     (:file "parser" :depends-on ("condition"))
+	     (:file "traversal" :depends-on ("util" "condition" "parser"))
+	     (:file "interface" :depends-on ("traversal"))
+	     (:file "support" :depends-on ("traversal"))
+             ;; alphabetical order
+	     (:file "support_cl-json" :depends-on ("support"))
+             (:file "support_com-gigamonkeys-json" :depends-on ("support"))
+             (:file "support_com-inuoe-jzon" :depends-on ("support"))
+             (:file "support_jonathan" :depends-on ("support"))
+             (:file "support_json-streams" :depends-on ("support"))
+             (:file "support_jsown" :depends-on ("support"))
+             (:file "support_yason" :depends-on ("support"))
+             ;; Supporting st-json has its own defsystem because it
+             ;; requires the real dependency. See below.
+             ))))
 
 ;;; Some library support. 
 (defsystem #:cl-json-pointer/st-json-support

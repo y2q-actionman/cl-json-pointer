@@ -51,8 +51,10 @@
 ;;; com.gigamonkeys.json
 (push-json-reader-alist :com.gigamonkeys.json 'com.gigamonkeys.json:parse-json)
 
-;;; com.inuoe.jzon
-(push-json-reader-alist :com.inuoe.jzon 'com.inuoe.jzon:parse)
+;;; com.inuoe.jzon (not in Quicklisp)
+(alexandria:if-let (jzon-package (find-package '#:com.inuoe.jzon))
+  (push-json-reader-alist :com.inuoe.jzon (find-symbol "PARSE" jzon-package))
+  (warn "cl-json-pointer test does not run on 'com.inuoe.jzon'."))
 
 ;;; shasht
 (push-json-reader-alist :shasht 'shasht:read-json)

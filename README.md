@@ -29,16 +29,16 @@ The MIT License. See LICENSE file.
 This library itself does not depend on any JSON libraries.
 You can work with your favorite one.
 
-Current supported json libs are:
+Current supported JSON libs are (alphabetical order):
 
 - cl-json
-- st-json
-- yason
-- jsown
-- jonathan (as `:plist` only)
-- json-streams
 - com.gigamonkeys.json
 - com.inuoe.jzon
+- jonathan (as `:plist` only)
+- json-streams
+- jsown
+- st-json
+- yason
 
 ### Loading
 
