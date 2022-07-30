@@ -58,3 +58,21 @@
 
 ;;; shasht
 (push-json-reader-alist :shasht 'shasht:read-json)
+
+(defun shasht-read-json-crafted-alist (&rest args)
+  (let ((shasht:*read-default-false-value* :false)
+        (shasht:*read-default-array-format* :list)
+        (shasht:*write-false-values* '(:false))
+        (shasht:*read-default-object-format* :alist)
+        (shasht:*write-alist-as-object* t))
+    (apply 'shasht:read-json args)))
+
+(defun shasht-read-json-crafted-plist (&rest args)
+  (let ((shasht:*read-default-object-format* :plist)
+        (shasht:*write-plist-as-object* t)
+        (shasht:*read-default-false-value* :false)
+        (shasht:*write-false-values* '(:false)))
+    (apply 'shasht:read-json args)))
+
+(push-json-reader-alist :shasht-alist 'shasht-read-json-crafted-alist)
+(push-json-reader-alist :shasht-plist 'shasht-read-json-crafted-plist)
