@@ -20,6 +20,7 @@
 	       #:json-streams
 	       #:jsown
 	       #:shasht
+	       #:trivial-json-codec
 	       #:yason
 	       ;; Not supported
 	       ;; #:define-json-expander #:json-mop

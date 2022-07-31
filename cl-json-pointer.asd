@@ -22,6 +22,7 @@
              (:file "support_json-streams" :depends-on ("support"))
              (:file "support_jsown" :depends-on ("support"))
              (:file "support_shasht" :depends-on ("support"))
+             (:file "support_trivial-json-codec" :depends-on ("support"))
              (:file "support_yason" :depends-on ("support"))
              ;; Supporting st-json has its own defsystem because it
              ;; requires the real dependency. See below.

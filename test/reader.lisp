@@ -76,3 +76,6 @@
 
 (push-json-reader-alist :shasht 'shasht-read-json-crafted-alist)
 (push-json-reader-alist :shasht 'shasht-read-json-crafted-plist)
+
+;;; trivial-json-codec
+(push-json-reader-alist :trivial-json-codec 'trivial-json-codec:deserialize-raw)
