@@ -37,7 +37,7 @@
   :components ((:module "src" :components ((:file "support_st-json")))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (when (find-package :st-json)
+  (when (find-system :st-json)
     (pushnew :cl-json-pointer/st-json-support *features*)))
 
 (defsystem #:cl-json-pointer/boost-json-support
@@ -48,7 +48,7 @@
   :components ((:module "src" :components ((:file "support_boost-json")))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (when (find-package :boost-json)
+  (when (find-system :boost-json)
     (pushnew :cl-json-pointer/boost-json-support *features*)))
 
 ;;; The main defsystem.
