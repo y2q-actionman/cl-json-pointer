@@ -279,9 +279,13 @@ After that, 'cljsp' package will be defined. It exports these symbols:
 - `delete`
 - `deletef`
 
-# TODO
+# See Also
 
-- Integration with [`jsown:val`](https://github.com/madnificent/jsown) functionalities.
+- [`jsown:val`](https://github.com/madnificent/jsown) functionalities.
   (I think, I cound simply depend only `jsown` for implementing RFC6901.)
   
-- Integration with [`access`](https://github.com/AccelerationNet/access/) library.
+- [`access`](https://github.com/AccelerationNet/access/) library
+  traverses many kind of Lisp objects like cl-json-pointer do.
+
+- [`jsown-utils`](https://github.com/muyinliu/jsown-utils/) has some
+  accessors works like JSON pointers.
