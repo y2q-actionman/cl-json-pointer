@@ -57,29 +57,25 @@
 			 (error "Unexpected type ~A for 'esubtypecase'"
 				,current-type)))))))
 
-(defmacro with-current-json-reader ((func_) &body body)
+(defmacro with-current-json-reader ((flavor reader-func) &body body)
   "Binds `*current-json-reader*', `*current-array-type*', and
-`*json-object-flavor*' referring FUNC_, and runs BODY."
-  (let ((func (gensym)))
-    `(let* ((,func ,func_)
-	    (,func (if (keywordp ,func)
-		       (cdr (assoc ,func *json-reader-alist*))
-		       ,func))
-	    (*current-json-reader* ,func)
+`*json-object-flavor*' referring READER-FUNC, and runs BODY."
+  (let ()
+    `(let* ((*current-json-reader* ,reader-func)
 	    (*current-array-type* (type-of (read-json-string +array-type-check+)))
-	    (*json-object-flavor*
-	     (if-let ((type (rassoc ,func *json-reader-alist*)))
-	       (car type)
-	       *json-reader-alist*)))
+	    (*json-object-flavor* ,flavor))
        ,@body)))
+
+(defun print-test-heading ()
+  (format t "~&testing on ~A:~A~& (JSON object flavor ~A, JSON array = ~A)~%"
+	  (package-name (symbol-package *current-json-reader*))
+	  *current-json-reader*
+	  *json-object-flavor* *current-array-type*))
 
 (defun run (&optional (reader-alist *json-reader-alist*))	; test entry point
   "Runs `1am:run' with changing JSON backend based on `*json-reader-alist*'"
   (loop with shuffled = (alexandria:shuffle (copy-list reader-alist))
-     for (nil . func) in shuffled
-     do (with-current-json-reader (func)
-	  (format t "~&testing on ~A:~A~& (JSON ~A, JSON array = ~A)~%"
-		  (package-name (symbol-package *current-json-reader*))
-		  *current-json-reader*
-		  *json-object-flavor* *current-array-type*)
+     for (flavor . func) in shuffled
+     do (with-current-json-reader (flavor func)
+	  (print-test-heading)
 	  (1am:run))))

@@ -1,8 +1,8 @@
 (in-package :cl-json-pointer/test)
 
-(defmacro push-json-reader-alist (keyword function)
+(defmacro push-json-reader-alist (json-object-flavor-keyword function)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (pushnew (cons ,keyword ,function)
+     (pushnew (cons ,json-object-flavor-keyword ,function)
 	      *json-reader-alist* :test #'equal)))
 
 ;;; cl-json
@@ -74,5 +74,5 @@
         (shasht:*write-false-values* '(:false)))
     (apply 'shasht:read-json args)))
 
-(push-json-reader-alist :shasht-alist 'shasht-read-json-crafted-alist)
-(push-json-reader-alist :shasht-plist 'shasht-read-json-crafted-plist)
+(push-json-reader-alist :shasht 'shasht-read-json-crafted-alist)
+(push-json-reader-alist :shasht 'shasht-read-json-crafted-plist)
