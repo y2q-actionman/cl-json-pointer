@@ -12,15 +12,15 @@
 	       ;; test libs
 	       #:named-readtables #:1am
 	       ;; All Json libs and platform supports (alphabetical order)
-               (:feature :cl-json-pointer/boost-json-support #:boost-json)
+               (:feature :cl-json-pointer/boost-json-support #:cl-json-pointer/boost-json-support)
 	       #:cl-json
-	       #:cl-json-pointer/st-json-support
 	       #:com.gigamonkeys.json
                (:feature :cl-json-pointer/test/com.inuoe.jzon #:com.inuoe.jzon)
 	       #:jonathan ; I surprised this lib has 8 dependencies.
 	       #:json-streams
 	       #:jsown
 	       #:shasht
+	       #:cl-json-pointer/st-json-support ; st-json
 	       #:trivial-json-codec
 	       #:yason
 	       ;; Not supported
