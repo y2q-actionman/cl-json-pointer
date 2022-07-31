@@ -14,6 +14,7 @@
 (defmethod json-object-equal-p (obj1 obj2)
   (equalp obj1 obj2))
 
+#+cl-json-pointer/boost-json-support
 (defmethod json-object-equal-p ((obj1 boost-json:json-object) (obj2 boost-json:json-object))
   "Currently, boost-json only has its own class for JSON object.
  (st-json has its own type, but it is a structure, which `cl:equalp' works."

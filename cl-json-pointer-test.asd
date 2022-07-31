@@ -1,9 +1,7 @@
 ;;; Some libs are not in Quicklisp.
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (when (find-package :com.inuoe.jzon)
-    (pushnew :cl-json-pointer/test/com.inuoe.jzon *features*))
-  (when (find-package :boost-json)
-    (pushnew :cl-json-pointer/test/boost-json *features*)))
+    (pushnew :cl-json-pointer/test/com.inuoe.jzon *features*)))
 
 (defsystem #:cl-json-pointer/test
   :description "Tests for cl-json-pointer."
@@ -14,7 +12,7 @@
 	       ;; test libs
 	       #:named-readtables #:1am
 	       ;; All Json libs and platform supports (alphabetical order)
-               (:feature :cl-json-pointer/test/boost-json #:boost-json)
+               (:feature :cl-json-pointer/boost-json-support #:boost-json)
 	       #:cl-json
 	       #:cl-json-pointer/st-json-support
 	       #:com.gigamonkeys.json
