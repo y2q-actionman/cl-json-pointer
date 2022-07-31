@@ -67,7 +67,7 @@
        ,@body)))
 
 (defun print-test-heading ()
-  (format t "~&testing on ~A:~A~& (JSON object flavor ~A, JSON array = ~A)~%"
+  (format t "~&testing on ~A:~A~&  JSON object flavor ~A~&  JSON array = ~A~%"
 	  (package-name (symbol-package *current-json-reader*))
 	  *current-json-reader*
 	  *json-object-flavor* *current-array-type*))

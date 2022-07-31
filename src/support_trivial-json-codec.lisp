@@ -1,5 +1,8 @@
 (in-package :cl-json-pointer)
 
+;;; `trivial-json-codec:deserialize' works well. See test/test-trivial-json-codec.lisp file.
+;;; `trivial-json-codec:deserialize-raw' requires special handlings.
+
 (defmethod intern-object-key ((flavor (eql :trivial-json-codec)) (rtoken string))
   "It seems trivial-json-codec ignores escape characters (backslashes).
 
@@ -67,4 +70,4 @@ This method treats them specially."
   (let ((*traverse-nil-set-to-last-method* :array))
     (call-next-method)))
 
-;; (pushnew :trivial-json-codec *cl-json-pointer-supported-json-flavors*)
+(pushnew :trivial-json-codec *cl-json-pointer-supported-json-flavors*)

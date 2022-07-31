@@ -6,7 +6,7 @@ This libary aims to be independent from any JSON libraries (as much as possible)
 
 # News
 
-- (2022-07-30) Added supports for com.inuoe.jzon and shasht.
+- (2022-07-31) Added supports for com.inuoe.jzon, shasht, and trivial-json-codec.
 
 # License
 
@@ -42,6 +42,7 @@ Current supported JSON libs are (alphabetical order):
 - jsown
 - shasht
 - st-json
+- trivial-json-codec (`deserialize-json` and `deserialize-json-raw`)
 - yason
 
 ### Loading
