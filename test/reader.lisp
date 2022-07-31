@@ -84,3 +84,8 @@
 (alexandria:if-let (boost-json-package (find-package '#:boost-json))
   (push-json-reader-alist :boost-json (find-symbol "JSON-DECODE" boost-json-package))
   (warn "cl-json-pointer test does not run on 'boost-json'."))
+
+;;; json-lib
+(alexandria:if-let (json-lib-package (find-package '#:json-lib))
+  (push-json-reader-alist :json-lib (find-symbol "PARSE" json-lib-package))
+  (warn "cl-json-pointer test does not run on 'json-lib'."))

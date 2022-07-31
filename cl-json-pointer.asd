@@ -19,6 +19,7 @@
              (:file "support_com-gigamonkeys-json" :depends-on ("support"))
              (:file "support_com-inuoe-jzon" :depends-on ("support"))
              (:file "support_jonathan" :depends-on ("support"))
+             (:file "support_json-lib" :depends-on ("support"))
              (:file "support_json-streams" :depends-on ("support"))
              (:file "support_jsown" :depends-on ("support"))
              (:file "support_shasht" :depends-on ("support"))

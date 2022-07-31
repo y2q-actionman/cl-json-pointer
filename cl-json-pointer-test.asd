@@ -1,7 +1,9 @@
 ;;; Some libs are not in Quicklisp.
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (when (find-system :com.inuoe.jzon nil)
-    (pushnew :cl-json-pointer/test/com.inuoe.jzon *features*)))
+    (pushnew :cl-json-pointer/test/com.inuoe.jzon *features*))
+  (when (find-system :json-lib nil)
+    (pushnew :cl-json-pointer/test/json-lib *features*)))
 
 (defsystem #:cl-json-pointer/test
   :description "Tests for cl-json-pointer."
@@ -12,11 +14,12 @@
 	       ;; test libs
 	       #:named-readtables #:1am
 	       ;; All Json libs and platform supports (alphabetical order)
-               (:feature :cl-json-pointer/boost-json-support #:cl-json-pointer/boost-json-support)
+               (:feature :cl-json-pointer/boost-json-support #:cl-json-pointer/boost-json-support) ; not in Quicklisp.
 	       #:cl-json
 	       #:com.gigamonkeys.json
-               (:feature :cl-json-pointer/test/com.inuoe.jzon #:com.inuoe.jzon)
+               (:feature :cl-json-pointer/test/com.inuoe.jzon #:com.inuoe.jzon) ; not in Quicklisp.
 	       #:jonathan ; I surprised this lib has 8 dependencies.
+               (:feature :cl-json-pointer/test/json-lib #:json-lib) ; not in Quicklisp.
 	       #:json-streams
 	       #:jsown
 	       #:shasht

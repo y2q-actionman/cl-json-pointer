@@ -6,7 +6,7 @@ This libary aims to be independent from any JSON libraries (as much as possible)
 
 # News
 
-- (2022-07-31) Added supports for com.inuoe.jzon, shasht, trivial-json-codec, and boost-json.
+- (2022-07-31) Added supports for com.inuoe.jzon, shasht, trivial-json-codec, boost-json, and json-lib.
 
 # License
 
@@ -39,6 +39,7 @@ Current supported JSON libs are (alphabetical order):
 - com.gigamonkeys.json
 - com.inuoe.jzon
 - jonathan (as `:plist` only)
+- json-lib
 - json-streams
 - jsown
 - shasht
