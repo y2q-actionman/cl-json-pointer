@@ -81,4 +81,6 @@
 (push-json-reader-alist :trivial-json-codec 'trivial-json-codec:deserialize-raw)
 
 ;;; boost-json
-(push-json-reader-alist :boost-json 'boost-json:json-decode)
+(alexandria:if-let (boost-json-package (find-package '#:boost-json))
+  (push-json-reader-alist :boost-json (find-symbol "JSON-DECODE" boost-json-package))
+  (warn "cl-json-pointer test does not run on 'boost-json'."))
