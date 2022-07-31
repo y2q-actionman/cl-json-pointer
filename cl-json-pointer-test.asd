@@ -1,6 +1,6 @@
 ;;; Some libs are not in Quicklisp.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (when (find-system :com.inuoe.jzon)
+  (when (find-system :com.inuoe.jzon nil)
     (pushnew :cl-json-pointer/test/com.inuoe.jzon *features*)))
 
 (defsystem #:cl-json-pointer/test
