@@ -40,6 +40,17 @@
   (when (find-package :st-json)
     (pushnew :cl-json-pointer/st-json-support *features*)))
 
+(defsystem #:cl-json-pointer/boost-json-support
+  :description "cl-json-pointer boost-json support."
+  :licence "MIT"
+  :author "YOKOTA Yuki <y2q.actionman@gmail.com>"
+  :depends-on (#:cl-json-pointer/core #:boost-json)
+  :components ((:module "src" :components ((:file "support_boost-json")))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-package :boost-json)
+    (pushnew :cl-json-pointer/boost-json-support *features*)))
+
 ;;; The main defsystem.
 (defsystem #:cl-json-pointer
   :description "A JSON Pointer (RFC6901) implementation for Common Lisp."
@@ -47,7 +58,9 @@
   :author "YOKOTA Yuki <y2q.actionman@gmail.com>"
   :depends-on (#:cl-json-pointer/core
 	       (:feature :cl-json-pointer/st-json-support
-			 #:cl-json-pointer/st-json-support))
+			 #:cl-json-pointer/st-json-support)
+               (:feature :cl-json-pointer/boost-json-support
+			 #:cl-json-pointer/boost-json-support))
   :in-order-to ((test-op (test-op #:cl-json-pointer/test))))
 
 ;;; For convenience.

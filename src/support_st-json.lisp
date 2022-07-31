@@ -2,7 +2,7 @@
 
 (defmethod traverse-by-reference-token
     (flavor
-     (obj st-json:jso) ; ST-JSON support is separated, for hooking the class here.
+     (obj st-json:jso) ; ST-JSON support is separated, for hooking the structure here.
      rtoken set-method next-setter)
   (declare (ignorable flavor))
   (multiple-value-bind (val exists)

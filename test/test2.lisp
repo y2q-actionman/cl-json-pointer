@@ -11,12 +11,21 @@
 ]
   :test 'equal)
 
+(defmethod json-object-equal-p (obj1 obj2)
+  (equalp obj1 obj2))
+
+(defmethod json-object-equal-p ((obj1 boost-json:json-object) (obj2 boost-json:json-object))
+  "Currently, boost-json only has its own class for JSON object.
+ (st-json has its own type, but it is a structure, which `cl:equalp' works."
+  (equalp (boost-json:json-object-members obj1)
+          (boost-json:json-object-members obj2)))
+
 (1am:test test2-array
   (let ((obj (read-json-string +test2-array+)))
     (1am:is (equal (get-by-json-pointer obj "/0/foo") "bar"))
     (1am:is (equal (get-by-json-pointer obj "/0/baz/1") 2))
-    (1am:is (equalp (get-by-json-pointer obj "/1")
-		    (read-json-string #{ "foo": "foobar" })))))
+    (1am:is (json-object-equal-p (get-by-json-pointer obj "/1")
+		                 (read-json-string #{ "foo": "foobar" })))))
 
 
 (define-constant +test2-undefined+

@@ -79,3 +79,6 @@
 
 ;;; trivial-json-codec
 (push-json-reader-alist :trivial-json-codec 'trivial-json-codec:deserialize-raw)
+
+;;; boost-json
+(push-json-reader-alist :boost-json 'boost-json:json-decode)
