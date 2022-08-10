@@ -283,6 +283,8 @@ After that, 'cljsp' package will be defined. It exports these symbols:
 
 # See Also
 
+## Related libraries
+
 - [`jsown:val`](https://github.com/madnificent/jsown) functionalities.
   (I think, I cound simply depend only `jsown` for implementing RFC6901.)
   
@@ -291,3 +293,8 @@ After that, 'cljsp' package will be defined. It exports these symbols:
 
 - [`jsown-utils`](https://github.com/muyinliu/jsown-utils/) has some
   accessors works like JSON pointers.
+
+## Reviews
+
+- [cl-json-pointer review in "Review of CL Json Libraries"](https://sabracrolleton.github.io/json-review#cl-json-pointer) by [@sabracrolleton](https://github.com/sabracrolleton).
+- [cl-json-pointer review in "Lisp Project of the Day"](https://40ants.com/lisp-project-of-the-day/2020/08/0158-cl-json-pointer.html) by [@40ants](https://github.com/40ants).
